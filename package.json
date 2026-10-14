@@ -1,0 +1,17 @@
+{
+  "name": "bugzilli",
+  "version": "1.0.0",
+  "description": "BugZilla Client",
+  "license": "ISC",
+  "author": "Paul Reynolds",
+  "type": "commonjs",
+  "main": "index.js",
+  "private": "true",
+  "scripts": {
+    "start": "electron ./src/electron/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^44.7.2"
+  }
+}
