@@ -47,7 +47,7 @@ export function BugList({ bugs, onSelect }: BugListProps) {
                   <span className="bug-type-icon">
                     <AlertCircle size={12} />
                   </span>
-                  BZ-{bug.id}
+                  {bug.id}
                 </span>
               </td>
               <td className="summary-cell">

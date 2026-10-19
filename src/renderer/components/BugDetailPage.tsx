@@ -228,7 +228,7 @@ export function BugDetailPage({
       <div className="detail-title">
         <div className="detail-heading">
           <p className="breadcrumbs">
-            {bug.product} / {form?.component || bug.component} / BZ-{bug.id}
+            {bug.product} / {form?.component || bug.component} / {bug.id}
           </p>
           {form ? (
             <input
