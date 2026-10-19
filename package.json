@@ -5,16 +5,32 @@
   "license": "ISC",
   "author": "Paul Reynolds",
   "type": "commonjs",
-  "main": "index.js",
-  "private": "true",
+  "main": "dist-electron/main.js",
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "start": "electron ./src/electron/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently -k \"vite\" \"tsc -p tsconfig.electron.json --watch\" \"wait-on http://localhost:5173 dist-electron/main.js && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "build": "npm run build:electron && vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "start": "npm run build && electron .",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.renderer.json --noEmit && tsc -p tsconfig.electron.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
     "electron": "^44.7.2",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5",
+    "wait-on": "^9.5.1"
+  },
+  "dependencies": {
+    "lucide-react": "^1.59.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }
