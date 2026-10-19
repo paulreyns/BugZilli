@@ -71,104 +71,112 @@ export function SettingsPage({
     }
   }
 
-  const orderedProjects = activeProjectId
-    ? [
-        ...projects.filter(({ id }) => id === activeProjectId),
-        ...projects.filter(({ id }) => id !== activeProjectId),
-      ]
+  const scopedToProject = Boolean(activeProjectId);
+  const visibleProjects = activeProjectId
+    ? projects.filter(({ id }) => id === activeProjectId)
     : projects;
+  const activeProject = visibleProjects[0];
 
   return (
     <main className="page settings-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Configuration</p>
-          <h1>{activeProjectId ? "Project settings" : "App settings"}</h1>
+          <h1>{scopedToProject ? "Project settings" : "App settings"}</h1>
           <p className="page-subtitle">
-            Connect Bugzilli to your Bugzilla instance and choose which products
-            appear as products.
+            {scopedToProject
+              ? `Configure how ${activeProject?.name ?? "this product"} appears and which bug fields to show.`
+              : "Connect Bugzilli to your Bugzilla instance and choose which products appear as products."}
           </p>
         </div>
       </header>
 
       <form onSubmit={submit} className="settings-form">
-        <section className="settings-card">
-          <div className="settings-card-title">
-            <Server size={19} />
-            <div>
-              <h2>Bugzilla connection</h2>
-              <p>Used for all searches, bug details, and attachments.</p>
+        {!scopedToProject && (
+          <section className="settings-card">
+            <div className="settings-card-title">
+              <Server size={19} />
+              <div>
+                <h2>Bugzilla connection</h2>
+                <p>Used for all searches, bug details, and attachments.</p>
+              </div>
             </div>
-          </div>
-          <label>
-            Bugzilla URL
-            <input
-              type="url"
-              value={baseUrl}
-              placeholder="https://bugzilla.example.com"
-              onChange={(event) => setBaseUrl(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            <span className="label-with-status">
-              API key
-              {settings.hasApiKey && !clearApiKey && (
-                <span className="saved-pill">
-                  <KeyRound size={12} /> Saved
-                </span>
-              )}
-            </span>
-            <input
-              type="password"
-              value={apiKey}
-              placeholder={
-                settings.hasApiKey && !clearApiKey
-                  ? "Leave blank to keep the saved key"
-                  : "Paste your Bugzilla API key"
-              }
-              onChange={(event) => {
-                setApiKey(event.target.value);
-                if (event.target.value) setClearApiKey(false);
-              }}
-            />
-          </label>
-          {settings.hasApiKey && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setClearApiKey((value) => !value);
-                setApiKey("");
-              }}
-            >
-              {clearApiKey ? "Keep saved API key" : "Remove saved API key"}
-            </button>
-          )}
-          {settings.keyStorage === "plain" && (
-            <p className="warning">
-              Your operating system credential store is unavailable. The API key
-              is stored locally but is not encrypted.
-            </p>
-          )}
-        </section>
+            <label>
+              Bugzilla URL
+              <input
+                type="url"
+                value={baseUrl}
+                placeholder="https://bugzilla.example.com"
+                onChange={(event) => setBaseUrl(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              <span className="label-with-status">
+                API key
+                {settings.hasApiKey && !clearApiKey && (
+                  <span className="saved-pill">
+                    <KeyRound size={12} /> Saved
+                  </span>
+                )}
+              </span>
+              <input
+                type="password"
+                value={apiKey}
+                placeholder={
+                  settings.hasApiKey && !clearApiKey
+                    ? "Leave blank to keep the saved key"
+                    : "Paste your Bugzilla API key"
+                }
+                onChange={(event) => {
+                  setApiKey(event.target.value);
+                  if (event.target.value) setClearApiKey(false);
+                }}
+              />
+            </label>
+            {settings.hasApiKey && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setClearApiKey((value) => !value);
+                  setApiKey("");
+                }}
+              >
+                {clearApiKey ? "Keep saved API key" : "Remove saved API key"}
+              </button>
+            )}
+            {settings.keyStorage === "plain" && (
+              <p className="warning">
+                Your operating system credential store is unavailable. The API
+                key is stored locally but is not encrypted.
+              </p>
+            )}
+          </section>
+        )}
 
         <section className="settings-card">
           <div className="settings-card-title projects-title">
             <div>
-              <h2>Products</h2>
-              <p>Each product maps to a Bugzilla product name.</p>
+              <h2>{scopedToProject ? "Product" : "Products"}</h2>
+              <p>
+                {scopedToProject
+                  ? "Display name, Bugzilla product mapping, and detail fields."
+                  : "Each product maps to a Bugzilla product name."}
+              </p>
             </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={addProject}
-            >
-              <Plus size={16} /> Add product
-            </button>
+            {!scopedToProject && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={addProject}
+              >
+                <Plus size={16} /> Add product
+              </button>
+            )}
           </div>
           <div className="project-editor-list">
-            {orderedProjects.length === 0 && (
+            {!scopedToProject && visibleProjects.length === 0 && (
               <button
                 type="button"
                 className="empty-projects"
@@ -178,11 +186,9 @@ export function SettingsPage({
                 Add your first Bugzilla project
               </button>
             )}
-            {orderedProjects.map((project) => (
+            {visibleProjects.map((project) => (
               <div
-                className={`project-editor ${
-                  project.id === activeProjectId ? "focused" : ""
-                }`}
+                className={`project-editor${scopedToProject ? " scoped" : ""}`}
                 key={project.id}
               >
                 <span className="project-avatar large">
@@ -231,18 +237,20 @@ export function SettingsPage({
                     updateProject(project.id, { detailFields: fields })
                   }
                 />
-                <button
-                  type="button"
-                  className="icon-button danger"
-                  aria-label={`Remove ${project.name}`}
-                  onClick={() =>
-                    setProjects((current) =>
-                      current.filter(({ id }) => id !== project.id),
-                    )
-                  }
-                >
-                  <Trash2 size={17} />
-                </button>
+                {!scopedToProject && (
+                  <button
+                    type="button"
+                    className="icon-button danger"
+                    aria-label={`Remove ${project.name}`}
+                    onClick={() =>
+                      setProjects((current) =>
+                        current.filter(({ id }) => id !== project.id),
+                      )
+                    }
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
