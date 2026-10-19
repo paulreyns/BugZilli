@@ -76,4 +76,5 @@ export interface BugzilliApi {
   searchBugs(search: BugSearch): Promise<Bug[]>;
   getBug(id: number): Promise<BugDetail>;
   openAttachment(id: number): Promise<void>;
+  readClipboardText(): Promise<string>;
 }

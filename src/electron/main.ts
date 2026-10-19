@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain, shell } from "electron";
 import path from "node:path";
 import { getBug, searchBugs } from "./bugzilla.js";
 import { getConnection, getSettings, saveSettings } from "./settings.js";
@@ -46,6 +46,7 @@ function registerHandlers(): void {
     const { baseUrl } = await getConnection();
     await shell.openExternal(`${baseUrl}/attachment.cgi?id=${id}`);
   });
+  ipcMain.handle("clipboard:read-text", () => clipboard.readText());
 }
 
 void app.whenReady().then(() => {
