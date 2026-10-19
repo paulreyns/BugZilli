@@ -50,7 +50,7 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-heading">
-        <span>Projects</span>
+        <span>Products</span>
         <button
           className="icon-button"
           type="button"

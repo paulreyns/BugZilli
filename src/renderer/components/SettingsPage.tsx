@@ -40,7 +40,7 @@ export function SettingsPage({
   function addProject() {
     const project: Project = {
       id: crypto.randomUUID(),
-      name: "New project",
+      name: "New product",
       product: "",
     };
     setProjects((current) => [...current, project]);
@@ -82,7 +82,7 @@ export function SettingsPage({
           <h1>{activeProjectId ? "Project settings" : "App settings"}</h1>
           <p className="page-subtitle">
             Connect Bugzilli to your Bugzilla instance and choose which products
-            appear as projects.
+            appear as products.
           </p>
         </div>
       </header>
@@ -152,15 +152,15 @@ export function SettingsPage({
         <section className="settings-card">
           <div className="settings-card-title projects-title">
             <div>
-              <h2>Projects</h2>
-              <p>Each project maps to a Bugzilla product name.</p>
+              <h2>Products</h2>
+              <p>Each product maps to a Bugzilla product name.</p>
             </div>
             <button
               type="button"
               className="secondary-button"
               onClick={addProject}
             >
-              <Plus size={16} /> Add project
+              <Plus size={16} /> Add product
             </button>
           </div>
           <div className="project-editor-list">
