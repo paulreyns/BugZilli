@@ -16,7 +16,14 @@ vi.mock("./settings.js", () => ({
   }),
 }));
 
-import { addAttachment, addComment, getBug, searchBugs, updateBug } from "./bugzilla.js";
+import {
+  addAttachment,
+  addComment,
+  getBug,
+  getProductDetailFields,
+  searchBugs,
+  updateBug,
+} from "./bugzilla.js";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -134,9 +141,65 @@ describe("Bugzilla API client", () => {
       "Confirmed",
     ]);
     expect(bug.attachments[0]?.fileName).toBe("screenshot.png");
+    const [bugUrl] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(bugUrl.pathname).toContain("/rest/bug/42");
+    expect(bugUrl.searchParams.has("include_fields")).toBe(false);
     for (const [url] of fetchMock.mock.calls as [URL, RequestInit][]) {
       expect(url.searchParams.get("api_key")).toBe("secret");
     }
+  });
+
+  it("maps extra Bugzilla fields onto the bug detail", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar is clipped",
+              status: "NEW",
+              whiteboard: "[triaged]",
+              cf_crash_signature: "nsFoo",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+
+    const bug = await getBug(42);
+    expect(bug.extraFields).toMatchObject({
+      whiteboard: "[triaged]",
+      cf_crash_signature: "nsFoo",
+    });
+  });
+
+  it("loads detail field options from one product bug", async () => {
+    fetchMock.mockResolvedValue(
+      response({
+        bugs: [
+          {
+            id: 9,
+            summary: "Sample",
+            product: "Browser",
+            status: "NEW",
+            assigned_to: "dev@example.com",
+            whiteboard: "[triaged]",
+            cf_blocking: "yes",
+          },
+        ],
+      }),
+    );
+
+    const fields = await getProductDetailFields("Browser");
+    const keys = fields.map(({ key }) => key);
+    expect(keys).toContain("assignedTo");
+    expect(keys).toContain("whiteboard");
+    expect(keys).toContain("cf_blocking");
+
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.searchParams.get("product")).toBe("Browser");
+    expect(url.searchParams.get("limit")).toBe("1");
   });
 
   it("surfaces Bugzilla error messages", async () => {

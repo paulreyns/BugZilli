@@ -1,10 +1,12 @@
 import { KeyRound, Plus, Save, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { defaultDetailFields } from "../../shared/detail-fields";
 import type {
   AppSettings,
   Project,
   SettingsUpdate,
 } from "../../shared/types";
+import { DetailFieldsEditor } from "./DetailFieldsEditor";
 
 interface SettingsPageProps {
   settings: AppSettings;
@@ -43,6 +45,7 @@ export function SettingsPage({
       name: "New product",
       product: "",
       showClosedBugs: false,
+      detailFields: defaultDetailFields(),
     };
     setProjects((current) => [...current, project]);
   }
@@ -221,6 +224,13 @@ export function SettingsPage({
                     <small>Include resolved bugs in this project's lists.</small>
                   </span>
                 </label>
+                <DetailFieldsEditor
+                  product={project.product}
+                  detailFields={project.detailFields}
+                  onChange={(fields) =>
+                    updateProject(project.id, { detailFields: fields })
+                  }
+                />
                 <button
                   type="button"
                   className="icon-button danger"

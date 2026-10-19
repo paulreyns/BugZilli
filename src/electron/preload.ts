@@ -14,6 +14,8 @@ const api: BugzilliApi = {
     ipcRenderer.invoke("settings:save", update),
   searchBugs: (search: BugSearch) => ipcRenderer.invoke("bugs:search", search),
   getBug: (id: number) => ipcRenderer.invoke("bugs:get", id),
+  getProductDetailFields: (product: string) =>
+    ipcRenderer.invoke("bugs:productFields", product),
   updateBug: (id: number, update: BugUpdate) =>
     ipcRenderer.invoke("bugs:update", id, update),
   addComment: (id: number, comment: BugCommentDraft) =>

@@ -1,4 +1,8 @@
 import {
+  catalogFromBugRecord,
+  keyForBugzillaField,
+} from "../shared/detail-fields.js";
+import {
   MAX_ATTACHMENT_BYTES,
   type Bug,
   type BugAttachment,
@@ -6,6 +10,7 @@ import {
   type BugComment,
   type BugCommentDraft,
   type BugDetail,
+  type DetailFieldOption,
   type BugSearch,
   type BugUpdate,
 } from "../shared/types.js";
@@ -45,7 +50,63 @@ function number(value: unknown): number {
   return typeof value === "number" ? value : Number(value) || 0;
 }
 
+const mappedBugzillaFields = new Set([
+  "id",
+  "summary",
+  "status",
+  "resolution",
+  "product",
+  "component",
+  "priority",
+  "severity",
+  "assigned_to",
+  "creator",
+  "creation_time",
+  "last_change_time",
+  "keywords",
+  "platform",
+  "version",
+]);
+
+function formatExtraValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return value.map(String).join(", ");
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
+
+function mapExtraFields(value: JsonRecord): Record<string, string> | undefined {
+  const extras: Record<string, string> = {};
+  for (const [name, raw] of Object.entries(value)) {
+    if (mappedBugzillaFields.has(name)) continue;
+    if (name.endsWith("_detail")) continue;
+    if (
+      raw !== null &&
+      raw !== undefined &&
+      typeof raw !== "string" &&
+      typeof raw !== "number" &&
+      typeof raw !== "boolean" &&
+      !(
+        Array.isArray(raw) &&
+        raw.every(
+          (item) =>
+            typeof item === "string" ||
+            typeof item === "number" ||
+            typeof item === "boolean",
+        )
+      )
+    ) {
+      continue;
+    }
+    const formatted = formatExtraValue(raw).trim();
+    if (!formatted) continue;
+    extras[keyForBugzillaField(name)] = formatted;
+  }
+  return Object.keys(extras).length > 0 ? extras : undefined;
+}
+
 function mapBug(value: JsonRecord): Bug {
+  const extraFields = mapExtraFields(value);
   return {
     id: number(value.id),
     summary: text(value.summary),
@@ -63,6 +124,7 @@ function mapBug(value: JsonRecord): Bug {
     keywords: Array.isArray(value.keywords) ? value.keywords.map(String) : [],
     platform: text(value.platform),
     version: text(value.version),
+    ...(extraFields ? { extraFields } : {}),
   };
 }
 
@@ -144,9 +206,10 @@ function assertBugId(id: number): void {
 
 export async function getBug(id: number): Promise<BugDetail> {
   assertBugId(id);
-  const fields = new URLSearchParams({ include_fields: bugFields });
+  // Fetch all scalar fields so product-configured Details fields (including
+  // custom Bugzilla fields) are available without a second round-trip.
   const [bugPayload, commentPayload, attachmentPayload] = await Promise.all([
-    request(`bug/${id}`, { params: fields }),
+    request(`bug/${id}`),
     request(`bug/${id}/comment`),
     request(`bug/${id}/attachment`),
   ]);
@@ -237,6 +300,35 @@ async function refreshBug(id: number, action: string): Promise<BugDetail> {
       error instanceof Error ? error.message : "The bug could not be refreshed.";
     throw new Error(`${action}, but the bug could not be refreshed. ${message}`);
   }
+}
+
+export async function getProductDetailFields(
+  product: string,
+): Promise<DetailFieldOption[]> {
+  const trimmed = product.trim();
+  if (!trimmed) {
+    throw new Error("Set the Bugzilla product name before loading fields.");
+  }
+
+  // Ensure a Bugzilla connection is configured before searching.
+  await getConnection();
+
+  const params = new URLSearchParams({
+    product: trimmed,
+    limit: "1",
+    order: "changeddate DESC",
+  });
+  const payload = await request("bug", { params });
+  const bugValue = Array.isArray(payload.bugs)
+    ? (payload.bugs[0] as JsonRecord | undefined)
+    : undefined;
+  if (!bugValue) {
+    throw new Error(
+      `No bugs found for product "${trimmed}". Create one in Bugzilla, then try again.`,
+    );
+  }
+
+  return catalogFromBugRecord(bugValue).map(({ key, label }) => ({ key, label }));
 }
 
 export async function updateBug(id: number, update: BugUpdate): Promise<BugDetail> {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { resolveDetailFields } from "../shared/detail-fields";
 import type {
   AppSettings,
   Bug,
@@ -229,6 +230,7 @@ export default function App() {
         {...(selectedBug ? { bug: selectedBug } : {})}
         loading={loadingDetail}
         error={detailError}
+        detailFields={resolveDetailFields(activeProject?.detailFields)}
         onBack={() => {
           setSelectedBug(undefined);
           setDetailError("");
