@@ -52,6 +52,7 @@ describe("Bugzilla API client", () => {
             product: "Browser",
             component: "UI",
             assigned_to: "dev@example.com",
+            assigned_to_detail: { real_name: "Dev Name" },
             last_change_time: "2026-10-18T10:00:00Z",
           },
         ],
@@ -64,11 +65,15 @@ describe("Bugzilla API client", () => {
       id: 42,
       summary: "Toolbar is clipped",
       assignedTo: "dev@example.com",
+      assignedToName: "Dev Name",
     });
     const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(url.searchParams.get("product")).toBe("Browser");
     expect(url.searchParams.get("quicksearch")).toBe("toolbar");
     expect(url.searchParams.get("resolution")).toBe("---");
+    expect(url.searchParams.get("include_fields")).toContain(
+      "assigned_to_detail",
+    );
     expect(options.headers).toMatchObject({
       "X-BUGZILLA-API-KEY": "secret",
     });
@@ -87,7 +92,15 @@ describe("Bugzilla API client", () => {
     fetchMock
       .mockResolvedValueOnce(
         response({
-          bugs: [{ id: 42, summary: "Toolbar is clipped", status: "NEW" }],
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar is clipped",
+              status: "NEW",
+              assigned_to: "dev@example.com",
+              assigned_to_detail: { real_name: "Dev Name" },
+            },
+          ],
         }),
       )
       .mockResolvedValueOnce(
@@ -135,6 +148,8 @@ describe("Bugzilla API client", () => {
 
     const bug = await getBug(42);
 
+    expect(bug.assignedTo).toBe("dev@example.com");
+    expect(bug.assignedToName).toBe("Dev Name");
     expect(bug.description).toBe("Steps to reproduce");
     expect(bug.comments.map((comment) => comment.text)).toEqual([
       "Follow-up",

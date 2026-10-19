@@ -33,47 +33,50 @@ export function BugList({ bugs, onSelect }: BugListProps) {
           </tr>
         </thead>
         <tbody>
-          {bugs.map((bug) => (
-            <tr
-              key={bug.id}
-              onClick={() => onSelect(bug.id)}
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") onSelect(bug.id);
-              }}
-            >
-              <td>
-                <span className="bug-key">
-                  <span className="bug-type-icon">
-                    <AlertCircle size={12} />
+          {bugs.map((bug) => {
+            const assignee = bug.assignedToName || bug.assignedTo;
+            return (
+              <tr
+                key={bug.id}
+                onClick={() => onSelect(bug.id)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") onSelect(bug.id);
+                }}
+              >
+                <td>
+                  <span className="bug-key">
+                    <span className="bug-type-icon">
+                      <AlertCircle size={12} />
+                    </span>
+                    {bug.id}
                   </span>
-                  {bug.id}
-                </span>
-              </td>
-              <td className="summary-cell">
-                <strong>{bug.summary}</strong>
-                <span>{bug.component}</span>
-              </td>
-              <td>
-                <span className="assignee">
-                  <span className="avatar">
-                    {initials(bug.assignedTo) || <CircleUserRound size={16} />}
+                </td>
+                <td className="summary-cell">
+                  <strong>{bug.summary}</strong>
+                  <span>{bug.component}</span>
+                </td>
+                <td>
+                  <span className="assignee">
+                    <span className="avatar">
+                      {initials(assignee) || <CircleUserRound size={16} />}
+                    </span>
+                    {assignee || "Unassigned"}
                   </span>
-                  {bug.assignedTo || "Unassigned"}
-                </span>
-              </td>
-              <td>{bug.priority || "—"}</td>
-              <td>
-                <span className={`status-pill ${statusClass(bug.status)}`}>
-                  {bug.status.replaceAll("_", " ")}
-                </span>
-              </td>
-              <td>{displayDate(bug.lastChangeTime)}</td>
-              <td>
-                <ChevronRight size={16} />
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td>{bug.priority || "—"}</td>
+                <td>
+                  <span className={`status-pill ${statusClass(bug.status)}`}>
+                    {bug.status.replaceAll("_", " ")}
+                  </span>
+                </td>
+                <td>{displayDate(bug.lastChangeTime)}</td>
+                <td>
+                  <ChevronRight size={16} />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

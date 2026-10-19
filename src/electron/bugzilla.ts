@@ -34,6 +34,7 @@ const bugFields = [
   "priority",
   "severity",
   "assigned_to",
+  "assigned_to_detail",
   "creator",
   "creation_time",
   "last_change_time",
@@ -117,6 +118,9 @@ function mapBug(value: JsonRecord): Bug {
     priority: text(value.priority),
     severity: text(value.severity),
     assignedTo: text(value.assigned_to),
+    assignedToName: text(
+      (value.assigned_to_detail as JsonRecord | undefined)?.real_name,
+    ),
     creator: text(value.creator),
     creationTime: text(value.creation_time),
     lastChangeTime: text(value.last_change_time),

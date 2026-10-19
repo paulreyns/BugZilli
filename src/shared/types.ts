@@ -43,6 +43,7 @@ export interface Bug {
   priority: string;
   severity: string;
   assignedTo: string;
+  assignedToName?: string;
   creator: string;
   creationTime: string;
   lastChangeTime: string;

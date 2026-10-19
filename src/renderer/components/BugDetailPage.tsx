@@ -625,7 +625,7 @@ function DetailField({
   if (fieldKey === "assignedTo") {
     return (
       <DetailRow label={definition.label} icon={icon}>
-        <strong>{bug.assignedTo || "Unassigned"}</strong>
+        <strong>{bug.assignedToName || bug.assignedTo || "Unassigned"}</strong>
       </DetailRow>
     );
   }
