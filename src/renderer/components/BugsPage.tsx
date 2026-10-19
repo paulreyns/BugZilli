@@ -83,7 +83,11 @@ export function BugsPage(props: BugsPageProps) {
       {loading ? (
         <LoadingRows />
       ) : mode === "list" ? (
-        <BugList bugs={bugs} onSelect={onSelectBug} />
+        <BugList
+          bugs={bugs}
+          {...(project.listColumns ? { listColumns: project.listColumns } : {})}
+          onSelect={onSelectBug}
+        />
       ) : (
         <BugBoard bugs={bugs} onSelect={onSelectBug} />
       )}

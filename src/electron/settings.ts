@@ -30,7 +30,7 @@ function cleanBaseUrl(value: string): string {
   return url.toString().replace(/\/$/, "");
 }
 
-function cleanDetailFields(fields: string[] | undefined): string[] | undefined {
+function cleanFieldKeys(fields: string[] | undefined): string[] | undefined {
   if (!fields) return undefined;
   const seen = new Set<string>();
   const cleaned: string[] = [];
@@ -51,7 +51,8 @@ function cleanProjects(projects: Project[]): Project[] {
     if (!project.id || !name || !product) {
       throw new Error("Every project needs a name and Bugzilla product.");
     }
-    const detailFields = cleanDetailFields(project.detailFields);
+    const detailFields = cleanFieldKeys(project.detailFields);
+    const listColumns = cleanFieldKeys(project.listColumns);
     return {
       id: project.id,
       name,
@@ -61,6 +62,7 @@ function cleanProjects(projects: Project[]): Project[] {
         : {}),
       ...(project.showClosedBugs ? { showClosedBugs: true } : {}),
       ...(detailFields ? { detailFields } : {}),
+      ...(listColumns ? { listColumns } : {}),
     };
   });
 }

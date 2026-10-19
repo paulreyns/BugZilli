@@ -1,7 +1,9 @@
 import {
+  bugzillaNameForKey,
   catalogFromBugRecord,
   keyForBugzillaField,
 } from "../shared/detail-fields.js";
+import { resolveListColumns } from "../shared/list-columns.js";
 import {
   MAX_ATTACHMENT_BYTES,
   type Bug,
@@ -13,6 +15,7 @@ import {
   type DetailFieldOption,
   type BugSearch,
   type BugUpdate,
+  type Project,
 } from "../shared/types.js";
 import { getConnection } from "./settings.js";
 
@@ -24,7 +27,7 @@ interface BugzillaRequest {
   body?: JsonRecord;
 }
 
-const bugFields = [
+const baseBugFields = [
   "id",
   "summary",
   "status",
@@ -41,7 +44,15 @@ const bugFields = [
   "keywords",
   "platform",
   "version",
-].join(",");
+];
+
+function includeFieldsForProject(project: Project): string {
+  const fields = new Set(baseBugFields);
+  for (const key of resolveListColumns(project.listColumns)) {
+    fields.add(bugzillaNameForKey(key));
+  }
+  return [...fields].join(",");
+}
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -167,7 +178,7 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
 
   const params = new URLSearchParams({
     product: project.product,
-    include_fields: bugFields,
+    include_fields: includeFieldsForProject(project),
     limit: String(Math.min(Math.max(search.limit ?? 200, 1), 500)),
     order: "changeddate DESC",
   });

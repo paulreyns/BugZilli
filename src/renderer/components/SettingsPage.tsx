@@ -1,12 +1,14 @@
 import { KeyRound, Plus, Save, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { defaultDetailFields } from "../../shared/detail-fields";
+import { defaultListColumns } from "../../shared/list-columns";
 import type {
   AppSettings,
   Project,
   SettingsUpdate,
 } from "../../shared/types";
 import { DetailFieldsEditor } from "./DetailFieldsEditor";
+import { ListColumnsEditor } from "./ListColumnsEditor";
 
 interface SettingsPageProps {
   settings: AppSettings;
@@ -46,6 +48,7 @@ export function SettingsPage({
       product: "",
       showClosedBugs: false,
       detailFields: defaultDetailFields(),
+      listColumns: defaultListColumns(),
     };
     setProjects((current) => [...current, project]);
   }
@@ -85,7 +88,7 @@ export function SettingsPage({
           <h1>{scopedToProject ? "Project settings" : "App settings"}</h1>
           <p className="page-subtitle">
             {scopedToProject
-              ? `Configure how ${activeProject?.name ?? "this product"} appears and which bug fields to show.`
+              ? `Configure how ${activeProject?.name ?? "this product"} appears, including list columns and detail fields.`
               : "Connect Bugzilli to your Bugzilla instance and choose which products appear as products."}
           </p>
         </div>
@@ -161,7 +164,7 @@ export function SettingsPage({
               <h2>{scopedToProject ? "Product" : "Products"}</h2>
               <p>
                 {scopedToProject
-                  ? "Display name, Bugzilla product mapping, and detail fields."
+                  ? "Display name, Bugzilla product mapping, list columns, and detail fields."
                   : "Each product maps to a Bugzilla product name."}
               </p>
             </div>
@@ -230,6 +233,13 @@ export function SettingsPage({
                     <small>Include resolved bugs in this project's lists.</small>
                   </span>
                 </label>
+                <ListColumnsEditor
+                  product={project.product}
+                  listColumns={project.listColumns}
+                  onChange={(columns) =>
+                    updateProject(project.id, { listColumns: columns })
+                  }
+                />
                 <DetailFieldsEditor
                   product={project.product}
                   detailFields={project.detailFields}
