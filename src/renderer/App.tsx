@@ -14,11 +14,55 @@ import { SettingsPage } from "./components/SettingsPage";
 import { Sidebar, type Page } from "./components/Sidebar";
 import { errorMessage } from "./errors";
 
+const LAST_LOCATION_KEY = "bugzilli.lastLocation";
+
+interface LastLocation {
+  projectId?: string;
+  page: Page;
+  globalSettings: boolean;
+}
+
+function readLastLocation(): LastLocation | undefined {
+  try {
+    const saved = localStorage.getItem(LAST_LOCATION_KEY);
+    if (!saved) return undefined;
+
+    const value: unknown = JSON.parse(saved);
+    if (!value || typeof value !== "object") {
+      console.error("Saved navigation state has an invalid format.");
+      return undefined;
+    }
+    const projectId = "projectId" in value ? value.projectId : undefined;
+    if (
+      "page" in value &&
+      (value.page === "list" ||
+        value.page === "board" ||
+        value.page === "settings") &&
+      "globalSettings" in value &&
+      typeof value.globalSettings === "boolean" &&
+      (!("projectId" in value) || typeof projectId === "string")
+    ) {
+      return {
+        page: value.page,
+        globalSettings: value.globalSettings,
+        ...(typeof projectId === "string" ? { projectId } : {}),
+      };
+    }
+    console.error("Saved navigation state has an invalid format.");
+  } catch (error) {
+    console.error("Could not read saved navigation state.", error);
+  }
+  return undefined;
+}
+
 export default function App() {
+  const [lastLocation] = useState(readLastLocation);
   const [settings, setSettings] = useState<AppSettings>();
   const [activeProjectId, setActiveProjectId] = useState<string>();
-  const [page, setPage] = useState<Page>("list");
-  const [globalSettings, setGlobalSettings] = useState(false);
+  const [page, setPage] = useState<Page>(lastLocation?.page ?? "list");
+  const [globalSettings, setGlobalSettings] = useState(
+    lastLocation?.globalSettings ?? false,
+  );
   const [bugs, setBugs] = useState<Bug[]>([]);
   const [query, setQuery] = useState("");
   const [loadingBugs, setLoadingBugs] = useState(false);
@@ -33,14 +77,29 @@ export default function App() {
       .getSettings()
       .then((value) => {
         setSettings(value);
-        setActiveProjectId(value.projects[0]?.id);
+        const savedProject = value.projects.find(
+          ({ id }) => id === lastLocation?.projectId,
+        );
+        setActiveProjectId(savedProject?.id ?? value.projects[0]?.id);
         if (!value.baseUrl || value.projects.length === 0) {
           setGlobalSettings(true);
           setPage("settings");
         }
       })
       .catch((error: unknown) => setStartupError(errorMessage(error)));
-  }, []);
+  }, [lastLocation]);
+
+  useEffect(() => {
+    if (!settings) return;
+    try {
+      localStorage.setItem(
+        LAST_LOCATION_KEY,
+        JSON.stringify({ projectId: activeProjectId, page, globalSettings }),
+      );
+    } catch (error) {
+      console.error("Could not save navigation state.", error);
+    }
+  }, [activeProjectId, globalSettings, page, settings]);
 
   const loadBugs = useCallback(async (projectId: string, searchQuery = "") => {
     setLoadingBugs(true);

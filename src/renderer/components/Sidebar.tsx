@@ -7,8 +7,10 @@ import {
   Plus,
   Settings,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Project } from "../../shared/types";
+
+const EXPANDED_PROJECTS_KEY = "bugzilli.expandedProjects";
 
 export type Page = "list" | "board" | "settings";
 
@@ -28,8 +30,36 @@ export function Sidebar({
   onGlobalSettings,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(projects.map(({ id }) => id)),
+    () => {
+      try {
+        const saved = localStorage.getItem(EXPANDED_PROJECTS_KEY);
+        if (!saved) return new Set(projects.map(({ id }) => id));
+
+        const value: unknown = JSON.parse(saved);
+        if (
+          Array.isArray(value) &&
+          value.every((id) => typeof id === "string")
+        ) {
+          return new Set(value);
+        }
+        console.error("Saved expanded products have an invalid format.");
+      } catch (error) {
+        console.error("Could not read saved expanded products.", error);
+      }
+      return new Set(projects.map(({ id }) => id));
+    },
   );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        EXPANDED_PROJECTS_KEY,
+        JSON.stringify([...expanded]),
+      );
+    } catch (error) {
+      console.error("Could not save expanded products.", error);
+    }
+  }, [expanded]);
 
   function toggle(projectId: string) {
     setExpanded((current) => {
