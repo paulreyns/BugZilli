@@ -59,8 +59,11 @@ function mapBug(value: JsonRecord): Bug {
 async function request(path: string, params?: URLSearchParams): Promise<JsonRecord> {
   const { baseUrl, apiKey } = await getConnection();
   const url = new URL(`${baseUrl}/rest/${path.replace(/^\//, "")}`);
-  if (apiKey && !params?.has("api_key")) params?.set("api_key", apiKey);
-  if (params) url.search = params.toString();
+  const requestParams = params ?? new URLSearchParams();
+  if (apiKey && !requestParams.has("api_key")) {
+    requestParams.set("api_key", apiKey);
+  }
+  url.search = requestParams.toString();
 
   const response = await fetch(url, {
     headers: {

@@ -115,6 +115,9 @@ describe("Bugzilla API client", () => {
     expect(bug.description).toBe("Steps to reproduce");
     expect(bug.comments).toHaveLength(1);
     expect(bug.attachments[0]?.fileName).toBe("screenshot.png");
+    for (const [url] of fetchMock.mock.calls as [URL, RequestInit][]) {
+      expect(url.searchParams.get("api_key")).toBe("secret");
+    }
   });
 
   it("surfaces Bugzilla error messages", async () => {
