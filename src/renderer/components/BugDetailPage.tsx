@@ -28,6 +28,12 @@ import {
   type BugDraft,
 } from "../../shared/bug-update";
 import {
+  detailFieldDefinition,
+  formatExtraFieldValue,
+  readBugFieldValue,
+  resolveDetailFields,
+} from "../../shared/detail-fields";
+import {
   MAX_ATTACHMENT_BYTES,
   type BugAttachmentDraft,
   type BugCommentDraft,
@@ -40,6 +46,7 @@ interface BugDetailPageProps {
   bug?: BugDetail;
   loading: boolean;
   error: string;
+  detailFields?: string[];
   onBack: () => void;
   onOpenAttachment: (id: number) => void;
   onUpdateBug: (id: number, update: BugUpdate) => Promise<void>;
@@ -71,6 +78,7 @@ export function BugDetailPage({
   bug,
   loading,
   error,
+  detailFields,
   onBack,
   onOpenAttachment,
   onUpdateBug,
@@ -198,6 +206,8 @@ export function BugDetailPage({
   const form = editing && draft ? draft : null;
   const dirty = form ? Object.keys(buildBugUpdate(bug, form)).length > 0 : false;
   const shownStatus = form ? form.status : bug.status;
+  const fields = resolveDetailFields(detailFields);
+  const fieldKeys = form && !fields.includes("status") ? ["status", ...fields] : fields;
 
   return (
     <main className="page detail-page">
@@ -402,159 +412,244 @@ export function BugDetailPage({
 
         <aside className="detail-sidebar">
           <h2>Details</h2>
-          {form && (
-            <TextControl
-              id="bug-status"
-              label="Status"
-              icon={<AlertCircle size={16} />}
-              value={form.status}
-              suggestions={STATUS_SUGGESTIONS}
-              disabled={pending !== null}
-              onChange={(status) => updateDraft({ status })}
+          {fieldKeys.map((key) => (
+            <DetailField
+              key={key}
+              fieldKey={key}
+              bug={bug}
+              form={form}
+              pending={pending !== null}
+              onDraftChange={updateDraft}
             />
-          )}
-          {form ? (
-            <TextControl
-              id="bug-assignee"
-              label="Assignee"
-              icon={<UserRound size={16} />}
-              value={form.assignedTo}
-              disabled={pending !== null}
-              onChange={(assignedTo) => updateDraft({ assignedTo })}
-            />
-          ) : (
-            <DetailRow label="Assignee" icon={<UserRound size={16} />}>
-              <strong>{bug.assignedTo || "Unassigned"}</strong>
-            </DetailRow>
-          )}
-          <DetailRow label="Reporter" icon={<UserRound size={16} />}>
-            <strong>{bug.creator || "Unknown"}</strong>
-          </DetailRow>
-          {form ? (
-            <TextControl
-              id="bug-priority"
-              label="Priority"
-              icon={<AlertCircle size={16} />}
-              value={form.priority}
-              suggestions={PRIORITY_SUGGESTIONS}
-              disabled={pending !== null}
-              onChange={(priority) => updateDraft({ priority })}
-            />
-          ) : (
-            <DetailRow label="Priority" icon={<AlertCircle size={16} />}>
-              <strong>{bug.priority || "—"}</strong>
-            </DetailRow>
-          )}
-          {form ? (
-            <TextControl
-              id="bug-severity"
-              label="Severity"
-              icon={<AlertCircle size={16} />}
-              value={form.severity}
-              suggestions={SEVERITY_SUGGESTIONS}
-              disabled={pending !== null}
-              onChange={(severity) => updateDraft({ severity })}
-            />
-          ) : (
-            <DetailRow label="Severity" icon={<AlertCircle size={16} />}>
-              <strong>{bug.severity || "—"}</strong>
-            </DetailRow>
-          )}
-          {form ? (
-            <TextControl
-              id="bug-component"
-              label="Component"
-              icon={<Component size={16} />}
-              value={form.component}
-              disabled={pending !== null}
-              onChange={(component) => updateDraft({ component })}
-            />
-          ) : (
-            <DetailRow label="Component" icon={<Component size={16} />}>
-              <strong>{bug.component || "—"}</strong>
-            </DetailRow>
-          )}
-          {form ? (
-            <TextControl
-              id="bug-version"
-              label="Version"
-              icon={<Tag size={16} />}
-              value={form.version}
-              disabled={pending !== null}
-              onChange={(version) => updateDraft({ version })}
-            />
-          ) : (
-            <DetailRow label="Version" icon={<Tag size={16} />}>
-              <strong>{bug.version || "—"}</strong>
-            </DetailRow>
-          )}
-          {form ? (
-            <TextControl
-              id="bug-platform"
-              label="Platform"
-              icon={<Monitor size={16} />}
-              value={form.platform}
-              disabled={pending !== null}
-              onChange={(platform) => updateDraft({ platform })}
-            />
-          ) : (
-            <DetailRow label="Platform" icon={<Monitor size={16} />}>
-              <strong>{bug.platform || "—"}</strong>
-            </DetailRow>
-          )}
-          <DetailRow label="Created" icon={<CalendarDays size={16} />}>
-            <strong>{displayDate(bug.creationTime)}</strong>
-          </DetailRow>
-          <DetailRow label="Updated" icon={<CalendarDays size={16} />}>
-            <strong>{displayDate(bug.lastChangeTime)}</strong>
-          </DetailRow>
-          {form ? (
-            <>
-              <TextControl
-                id="bug-resolution"
-                label="Resolution"
-                icon={<Tag size={16} />}
-                value={form.resolution}
-                suggestions={RESOLUTION_SUGGESTIONS}
-                disabled={pending !== null || isOpenStatus(form.status)}
-                onChange={(resolution) => updateDraft({ resolution })}
-              />
-              <p className="field-hint">
-                {isClosedStatus(form.status)
-                  ? "Required while this bug is closed."
-                  : isOpenStatus(form.status)
-                    ? "Cleared automatically while this bug is open."
-                    : "Set this when closing the bug."}
-              </p>
-              <TextControl
-                id="bug-keywords"
-                label="Keywords"
-                icon={<Tag size={16} />}
-                value={form.keywords}
-                disabled={pending !== null}
-                onChange={(keywords) => updateDraft({ keywords })}
-              />
-              <p className="field-hint">Separate keywords with commas.</p>
-            </>
-          ) : (
-            <>
-              {resolutionLabel(bug.resolution) && (
-                <DetailRow label="Resolution" icon={<Tag size={16} />}>
-                  <strong>{resolutionLabel(bug.resolution)}</strong>
-                </DetailRow>
-              )}
-              {bug.keywords.length > 0 && (
-                <div className="keyword-list">
-                  {bug.keywords.map((keyword) => (
-                    <span key={keyword}>{keyword}</span>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          ))}
         </aside>
       </div>
     </main>
+  );
+}
+
+function fieldIcon(key: string): ReactNode {
+  switch (key) {
+    case "assignedTo":
+    case "creator":
+    case "qaContact":
+      return <UserRound size={16} />;
+    case "creationTime":
+    case "lastChangeTime":
+    case "deadline":
+      return <CalendarDays size={16} />;
+    case "component":
+      return <Component size={16} />;
+    case "platform":
+    case "opSys":
+      return <Monitor size={16} />;
+    case "status":
+    case "priority":
+    case "severity":
+      return <AlertCircle size={16} />;
+    default:
+      return <Tag size={16} />;
+  }
+}
+
+function DetailField({
+  fieldKey,
+  bug,
+  form,
+  pending,
+  onDraftChange,
+}: {
+  fieldKey: string;
+  bug: BugDetail;
+  form: BugDraft | null;
+  pending: boolean;
+  onDraftChange: (values: Partial<BugDraft>) => void;
+}) {
+  const definition = detailFieldDefinition(fieldKey);
+  const icon = fieldIcon(fieldKey);
+
+  if (form && definition.editable) {
+    switch (definition.editable) {
+      case "status":
+        return (
+          <TextControl
+            id="bug-status"
+            label={definition.label}
+            icon={icon}
+            value={form.status}
+            suggestions={STATUS_SUGGESTIONS}
+            disabled={pending}
+            onChange={(status) => onDraftChange({ status })}
+          />
+        );
+      case "assignedTo":
+        return (
+          <TextControl
+            id="bug-assignee"
+            label={definition.label}
+            icon={icon}
+            value={form.assignedTo}
+            disabled={pending}
+            onChange={(assignedTo) => onDraftChange({ assignedTo })}
+          />
+        );
+      case "priority":
+        return (
+          <TextControl
+            id="bug-priority"
+            label={definition.label}
+            icon={icon}
+            value={form.priority}
+            suggestions={PRIORITY_SUGGESTIONS}
+            disabled={pending}
+            onChange={(priority) => onDraftChange({ priority })}
+          />
+        );
+      case "severity":
+        return (
+          <TextControl
+            id="bug-severity"
+            label={definition.label}
+            icon={icon}
+            value={form.severity}
+            suggestions={SEVERITY_SUGGESTIONS}
+            disabled={pending}
+            onChange={(severity) => onDraftChange({ severity })}
+          />
+        );
+      case "component":
+        return (
+          <TextControl
+            id="bug-component"
+            label={definition.label}
+            icon={icon}
+            value={form.component}
+            disabled={pending}
+            onChange={(component) => onDraftChange({ component })}
+          />
+        );
+      case "version":
+        return (
+          <TextControl
+            id="bug-version"
+            label={definition.label}
+            icon={icon}
+            value={form.version}
+            disabled={pending}
+            onChange={(version) => onDraftChange({ version })}
+          />
+        );
+      case "platform":
+        return (
+          <TextControl
+            id="bug-platform"
+            label={definition.label}
+            icon={icon}
+            value={form.platform}
+            disabled={pending}
+            onChange={(platform) => onDraftChange({ platform })}
+          />
+        );
+      case "resolution":
+        return (
+          <>
+            <TextControl
+              id="bug-resolution"
+              label={definition.label}
+              icon={icon}
+              value={form.resolution}
+              suggestions={RESOLUTION_SUGGESTIONS}
+              disabled={pending || isOpenStatus(form.status)}
+              onChange={(resolution) => onDraftChange({ resolution })}
+            />
+            <p className="field-hint">
+              {isClosedStatus(form.status)
+                ? "Required while this bug is closed."
+                : isOpenStatus(form.status)
+                  ? "Cleared automatically while this bug is open."
+                  : "Set this when closing the bug."}
+            </p>
+          </>
+        );
+      case "keywords":
+        return (
+          <>
+            <TextControl
+              id="bug-keywords"
+              label={definition.label}
+              icon={icon}
+              value={form.keywords}
+              disabled={pending}
+              onChange={(keywords) => onDraftChange({ keywords })}
+            />
+            <p className="field-hint">Separate keywords with commas.</p>
+          </>
+        );
+      default:
+        break;
+    }
+  }
+
+  if (definition.format === "keywords") {
+    if (bug.keywords.length === 0) return null;
+    return (
+      <div className="keyword-list" aria-label={definition.label}>
+        {bug.keywords.map((keyword) => (
+          <span key={keyword}>{keyword}</span>
+        ))}
+      </div>
+    );
+  }
+
+  if (definition.format === "resolution") {
+    const label = resolutionLabel(bug.resolution);
+    if (!label && !form) {
+      return null;
+    }
+    return (
+      <DetailRow label={definition.label} icon={icon}>
+        <strong>{label || "—"}</strong>
+      </DetailRow>
+    );
+  }
+
+  if (definition.format === "date") {
+    const raw = readBugFieldValue(bug, fieldKey);
+    return (
+      <DetailRow label={definition.label} icon={icon}>
+        <strong>{displayDate(typeof raw === "string" ? raw : "")}</strong>
+      </DetailRow>
+    );
+  }
+
+  if (fieldKey === "assignedTo") {
+    return (
+      <DetailRow label={definition.label} icon={icon}>
+        <strong>{bug.assignedTo || "Unassigned"}</strong>
+      </DetailRow>
+    );
+  }
+
+  if (fieldKey === "creator") {
+    return (
+      <DetailRow label={definition.label} icon={icon}>
+        <strong>{bug.creator || "Unknown"}</strong>
+      </DetailRow>
+    );
+  }
+
+  const raw = readBugFieldValue(bug, fieldKey);
+  const display =
+    typeof raw === "string"
+      ? raw
+      : Array.isArray(raw)
+        ? raw.map(String).join(", ")
+        : formatExtraFieldValue(raw);
+
+  return (
+    <DetailRow label={definition.label} icon={icon}>
+      <strong>{display || "—"}</strong>
+    </DetailRow>
   );
 }
 

@@ -4,6 +4,13 @@ export interface Project {
   product: string;
   description?: string;
   showClosedBugs?: boolean;
+  /** Ordered Bug Details sidebar fields. Defaults to the built-in layout when omitted. */
+  detailFields?: string[];
+}
+
+export interface DetailFieldOption {
+  key: string;
+  label: string;
 }
 
 export interface AppSettings {
@@ -43,6 +50,8 @@ export interface Bug {
   keywords: string[];
   platform: string;
   version: string;
+  /** Additional Bugzilla fields (custom or uncommon) for the Details sidebar. */
+  extraFields?: Record<string, string>;
 }
 
 export interface BugComment {
@@ -104,6 +113,7 @@ export interface BugzilliApi {
   saveSettings(update: SettingsUpdate): Promise<AppSettings>;
   searchBugs(search: BugSearch): Promise<Bug[]>;
   getBug(id: number): Promise<BugDetail>;
+  getProductDetailFields(product: string): Promise<DetailFieldOption[]>;
   updateBug(id: number, update: BugUpdate): Promise<BugDetail>;
   addComment(id: number, comment: BugCommentDraft): Promise<BugDetail>;
   addAttachment(id: number, attachment: BugAttachmentDraft): Promise<BugDetail>;

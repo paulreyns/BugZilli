@@ -4,6 +4,7 @@ import {
   addAttachment,
   addComment,
   getBug,
+  getProductDetailFields,
   searchBugs,
   updateBug,
 } from "./bugzilla.js";
@@ -53,6 +54,9 @@ function registerHandlers(): void {
     searchBugs(search),
   );
   ipcMain.handle("bugs:get", (_event, id: number) => getBug(id));
+  ipcMain.handle("bugs:productFields", (_event, product: string) =>
+    getProductDetailFields(product),
+  );
   ipcMain.handle("bugs:update", (_event, id: number, update: BugUpdate) =>
     updateBug(id, update),
   );
