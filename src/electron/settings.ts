@@ -44,6 +44,7 @@ function cleanProjects(projects: Project[]): Project[] {
       ...(project.description?.trim()
         ? { description: project.description.trim() }
         : {}),
+      ...(project.showClosedBugs ? { showClosedBugs: true } : {}),
     };
   });
 }
