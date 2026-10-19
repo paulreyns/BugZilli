@@ -359,6 +359,38 @@ button:disabled {
   white-space: nowrap;
 }
 
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 -4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sort-button svg {
+  opacity: 0.35;
+}
+
+.sort-button:hover {
+  background: #f1f2f4;
+  color: #172b4d;
+}
+
+.sort-button:hover svg,
+.sort-button.sorted svg {
+  opacity: 1;
+}
+
+.sort-button.sorted {
+  color: #0c66e4;
+}
+
 .issue-table td {
   height: 55px;
   padding: 8px 12px;
