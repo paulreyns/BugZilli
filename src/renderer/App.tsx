@@ -2,18 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import type {
   AppSettings,
   Bug,
+  BugAttachmentDraft,
+  BugCommentDraft,
   BugDetail,
+  BugUpdate,
   SettingsUpdate,
 } from "../shared/types";
 import { BugDetailPage } from "./components/BugDetailPage";
 import { BugsPage } from "./components/BugsPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { Sidebar, type Page } from "./components/Sidebar";
-
-function errorMessage(error: unknown): string {
-  if (!(error instanceof Error)) return "Something went wrong.";
-  return error.message.replace(/^Error invoking remote method '[^']+': Error: /, "");
-}
+import { errorMessage } from "./errors";
 
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>();
@@ -93,6 +92,28 @@ export default function App() {
     }
   }
 
+  function rememberBug(id: number, next: BugDetail) {
+    setSelectedBug((current) => (current?.id === id ? next : current));
+  }
+
+  function updateBug(id: number, update: BugUpdate) {
+    return window.bugzilli.updateBug(id, update).then((next) => {
+      rememberBug(id, next);
+    });
+  }
+
+  function addComment(id: number, comment: BugCommentDraft) {
+    return window.bugzilli.addComment(id, comment).then((next) => {
+      rememberBug(id, next);
+    });
+  }
+
+  function addAttachment(id: number, attachment: BugAttachmentDraft) {
+    return window.bugzilli.addAttachment(id, attachment).then((next) => {
+      rememberBug(id, next);
+    });
+  }
+
   async function save(update: SettingsUpdate) {
     const next = await window.bugzilli.saveSettings(update);
     setSettings(next);
@@ -137,6 +158,9 @@ export default function App() {
         onOpenAttachment={(id) => {
           void window.bugzilli.openAttachment(id);
         }}
+        onUpdateBug={updateBug}
+        onAddComment={addComment}
+        onAddAttachment={addAttachment}
       />
     );
   } else if (page === "settings" || globalSettings || !activeProject) {

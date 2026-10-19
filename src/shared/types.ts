@@ -70,10 +70,42 @@ export interface BugDetail extends Bug {
   attachments: BugAttachment[];
 }
 
+export interface BugUpdate {
+  summary?: string;
+  status?: string;
+  resolution?: string;
+  priority?: string;
+  severity?: string;
+  assignedTo?: string;
+  component?: string;
+  version?: string;
+  platform?: string;
+  keywords?: string[];
+}
+
+export interface BugCommentDraft {
+  text: string;
+  isPrivate?: boolean;
+}
+
+export interface BugAttachmentDraft {
+  fileName: string;
+  contentType: string;
+  data: string;
+  summary?: string;
+  comment?: string;
+  isPrivate?: boolean;
+}
+
+export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
 export interface BugzilliApi {
   getSettings(): Promise<AppSettings>;
   saveSettings(update: SettingsUpdate): Promise<AppSettings>;
   searchBugs(search: BugSearch): Promise<Bug[]>;
   getBug(id: number): Promise<BugDetail>;
+  updateBug(id: number, update: BugUpdate): Promise<BugDetail>;
+  addComment(id: number, comment: BugCommentDraft): Promise<BugDetail>;
+  addAttachment(id: number, attachment: BugAttachmentDraft): Promise<BugDetail>;
   openAttachment(id: number): Promise<void>;
 }

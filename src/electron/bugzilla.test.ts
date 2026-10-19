@@ -16,7 +16,7 @@ vi.mock("./settings.js", () => ({
   }),
 }));
 
-import { getBug, searchBugs } from "./bugzilla.js";
+import { addAttachment, addComment, getBug, searchBugs, updateBug } from "./bugzilla.js";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -128,5 +128,206 @@ describe("Bugzilla API client", () => {
     await expect(searchBugs({ projectId: "browser" })).rejects.toThrow(
       "Invalid API key",
     );
+  });
+
+  it("updates a bug with PUT and returns the refreshed bug", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ bugs: [{ id: 42, changes: {} }] }))
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar clips on resize",
+              status: "ASSIGNED",
+              assigned_to: "dev@example.com",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({ bugs: { "42": { comments: [{ id: 1, text: "Steps" }] } } }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+
+    const bug = await updateBug(42, {
+      summary: "Toolbar clips on resize",
+      status: "ASSIGNED",
+      assignedTo: "dev@example.com",
+      resolution: "---",
+      keywords: ["regression", " crash "],
+    });
+
+    expect(bug.summary).toBe("Toolbar clips on resize");
+    expect(bug.description).toBe("Steps");
+    const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/bug/42");
+    expect(url.searchParams.get("api_key")).toBe("secret");
+    expect(options.method).toBe("PUT");
+    expect(options.headers).toMatchObject({
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-BUGZILLA-API-KEY": "secret",
+    });
+    expect(JSON.parse(String(options.body))).toEqual({
+      ids: [42],
+      summary: "Toolbar clips on resize",
+      status: "ASSIGNED",
+      assigned_to: "dev@example.com",
+      resolution: "",
+      keywords: { set: ["regression", "crash"] },
+    });
+  });
+
+  it("rejects an empty bug update before calling Bugzilla", async () => {
+    await expect(updateBug(42, {})).rejects.toThrow("There is nothing to update.");
+    await expect(updateBug(42, { summary: "  " })).rejects.toThrow(
+      "Summary cannot be empty.",
+    );
+    await expect(updateBug(0, { summary: "Toolbar" })).rejects.toThrow(
+      "Invalid bug number.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed refresh after a successful update", async () => {
+    fetchMock.mockResolvedValueOnce(response({ bugs: [{ id: 42 }] }));
+    fetchMock.mockResolvedValue(
+      response({ error: true, message: "unavailable" }, false),
+    );
+
+    await expect(updateBug(42, { summary: "Updated" })).rejects.toThrow(
+      "Saved, but the bug could not be refreshed. unavailable",
+    );
+  });
+
+  it("adds a comment with POST", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ id: 9 }))
+      .mockResolvedValueOnce(
+        response({ bugs: [{ id: 42, summary: "Toolbar is clipped" }] }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          bugs: {
+            "42": {
+              comments: [
+                { id: 1, text: "Steps" },
+                { id: 9, creator: "dev", text: "Looks fixed" },
+              ],
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+
+    const bug = await addComment(42, { text: "  Looks fixed  ", isPrivate: true });
+
+    expect(bug.comments[0]?.text).toBe("Looks fixed");
+    const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/bug/42/comment");
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(String(options.body))).toEqual({
+      comment: "Looks fixed",
+      is_private: true,
+    });
+  });
+
+  it("rejects a blank comment", async () => {
+    await expect(addComment(42, { text: "   " })).rejects.toThrow(
+      "Comment cannot be empty.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("uploads an attachment as base64", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ ids: [7] }))
+      .mockResolvedValueOnce(response({ bugs: [{ id: 42, summary: "Toolbar" }] }))
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(
+        response({
+          bugs: {
+            "42": [
+              {
+                id: 7,
+                file_name: "notes.txt",
+                summary: "notes.txt",
+                content_type: "text/plain",
+                size: 5,
+              },
+            ],
+          },
+        }),
+      );
+
+    const bug = await addAttachment(42, {
+      fileName: "notes.txt",
+      contentType: "text/plain",
+      data: "data:text/plain;base64,aGVsbG8=",
+      comment: " See notes ",
+    });
+
+    expect(bug.attachments[0]?.fileName).toBe("notes.txt");
+    const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/bug/42/attachment");
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(String(options.body))).toEqual({
+      ids: [42],
+      file_name: "notes.txt",
+      summary: "notes.txt",
+      content_type: "text/plain",
+      data: "aGVsbG8=",
+      comment: "See notes",
+      is_private: false,
+    });
+  });
+
+  it("marks patch files and keeps a provided summary", async () => {
+    fetchMock.mockResolvedValueOnce(response({ ids: [8] }));
+    fetchMock.mockResolvedValue(response({ error: true, message: "refresh failed" }, false));
+
+    await expect(
+      addAttachment(42, {
+        fileName: "fix.patch",
+        contentType: "text/x-patch",
+        data: "aGVsbG8=",
+        summary: "Fix the toolbar",
+        isPrivate: true,
+      }),
+    ).rejects.toThrow("Attachment uploaded, but the bug could not be refreshed.");
+
+    const [, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(JSON.parse(String(options.body))).toMatchObject({
+      file_name: "fix.patch",
+      summary: "Fix the toolbar",
+      is_patch: true,
+      is_private: true,
+    });
+  });
+
+  it("rejects empty, invalid, and oversized attachments", async () => {
+    await expect(
+      addAttachment(42, {
+        fileName: " ",
+        contentType: "text/plain",
+        data: "aGVsbG8=",
+      }),
+    ).rejects.toThrow("Attachment needs a file name.");
+    await expect(
+      addAttachment(42, {
+        fileName: "notes.txt",
+        contentType: "text/plain",
+        data: "not base64",
+      }),
+    ).rejects.toThrow("Attachment data must be base64.");
+    await expect(
+      addAttachment(42, {
+        fileName: "huge.bin",
+        contentType: "application/octet-stream",
+        data: Buffer.alloc(10 * 1024 * 1024 + 1).toString("base64"),
+      }),
+    ).rejects.toThrow("Attachments must be 10 MB or smaller.");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

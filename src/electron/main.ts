@@ -1,8 +1,20 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
-import { getBug, searchBugs } from "./bugzilla.js";
+import {
+  addAttachment,
+  addComment,
+  getBug,
+  searchBugs,
+  updateBug,
+} from "./bugzilla.js";
 import { getConnection, getSettings, saveSettings } from "./settings.js";
-import type { BugSearch, SettingsUpdate } from "../shared/types.js";
+import type {
+  BugAttachmentDraft,
+  BugCommentDraft,
+  BugSearch,
+  BugUpdate,
+  SettingsUpdate,
+} from "../shared/types.js";
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -41,6 +53,17 @@ function registerHandlers(): void {
     searchBugs(search),
   );
   ipcMain.handle("bugs:get", (_event, id: number) => getBug(id));
+  ipcMain.handle("bugs:update", (_event, id: number, update: BugUpdate) =>
+    updateBug(id, update),
+  );
+  ipcMain.handle("bugs:comment", (_event, id: number, comment: BugCommentDraft) =>
+    addComment(id, comment),
+  );
+  ipcMain.handle(
+    "bugs:attachment",
+    (_event, id: number, attachment: BugAttachmentDraft) =>
+      addAttachment(id, attachment),
+  );
   ipcMain.handle("attachments:open", async (_event, id: number) => {
     if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid attachment.");
     const { baseUrl } = await getConnection();
