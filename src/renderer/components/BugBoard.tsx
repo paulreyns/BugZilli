@@ -35,7 +35,7 @@ export function BugBoard({ bugs, onSelect }: BugBoardProps) {
                 <strong>{bug.summary}</strong>
                 <span className="bug-card-component">{bug.component}</span>
                 <footer>
-                  <span className="bug-key">BZ-{bug.id}</span>
+                  <span className="bug-key">{bug.id}</span>
                   <span className="avatar">
                     {initials(bug.assignedTo) || "?"}
                   </span>
