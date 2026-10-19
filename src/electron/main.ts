@@ -28,7 +28,7 @@ function createWindow(): void {
   if (developmentUrl) {
     void window.loadURL(developmentUrl);
   } else {
-    void window.loadFile(path.join(__dirname, "../dist/index.html"));
+    void window.loadFile(path.join(__dirname, "../../dist/index.html"));
   }
 }
 
