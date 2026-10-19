@@ -85,6 +85,7 @@ export function BugsPage(props: BugsPageProps) {
       ) : mode === "list" ? (
         <BugList
           bugs={bugs}
+          product={project.product}
           {...(project.listColumns ? { listColumns: project.listColumns } : {})}
           onSelect={onSelectBug}
         />
