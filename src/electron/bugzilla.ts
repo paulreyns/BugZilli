@@ -1,13 +1,23 @@
-import type {
-  Bug,
-  BugAttachment,
-  BugComment,
-  BugDetail,
-  BugSearch,
+import {
+  MAX_ATTACHMENT_BYTES,
+  type Bug,
+  type BugAttachment,
+  type BugAttachmentDraft,
+  type BugComment,
+  type BugCommentDraft,
+  type BugDetail,
+  type BugSearch,
+  type BugUpdate,
 } from "../shared/types.js";
 import { getConnection } from "./settings.js";
 
 type JsonRecord = Record<string, unknown>;
+
+interface BugzillaRequest {
+  params?: URLSearchParams;
+  method?: "GET" | "POST" | "PUT";
+  body?: JsonRecord;
+}
 
 const bugFields = [
   "id",
@@ -56,20 +66,23 @@ function mapBug(value: JsonRecord): Bug {
   };
 }
 
-async function request(path: string, params?: URLSearchParams): Promise<JsonRecord> {
+async function request(path: string, init?: BugzillaRequest): Promise<JsonRecord> {
   const { baseUrl, apiKey } = await getConnection();
   const url = new URL(`${baseUrl}/rest/${path.replace(/^\//, "")}`);
-  const requestParams = params ?? new URLSearchParams();
+  const requestParams = init?.params ?? new URLSearchParams();
   if (apiKey && !requestParams.has("api_key")) {
     requestParams.set("api_key", apiKey);
   }
   url.search = requestParams.toString();
 
   const response = await fetch(url, {
+    method: init?.method ?? "GET",
     headers: {
       Accept: "application/json",
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...(apiKey ? { "X-BUGZILLA-API-KEY": apiKey } : {}),
     },
+    ...(init?.body ? { body: JSON.stringify(init.body) } : {}),
   });
 
   const payload = (await response.json().catch(() => ({}))) as JsonRecord;
@@ -95,7 +108,7 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
   if (!project.showClosedBugs) params.set("resolution", "---");
   if (search.query?.trim()) params.set("quicksearch", search.query.trim());
 
-  const payload = await request("bug", params);
+  const payload = await request("bug", { params });
   return Array.isArray(payload.bugs)
     ? payload.bugs.map((bug) => mapBug(bug as JsonRecord))
     : [];
@@ -125,11 +138,15 @@ function mapAttachment(value: JsonRecord): BugAttachment {
   };
 }
 
-export async function getBug(id: number): Promise<BugDetail> {
+function assertBugId(id: number): void {
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid bug number.");
+}
+
+export async function getBug(id: number): Promise<BugDetail> {
+  assertBugId(id);
   const fields = new URLSearchParams({ include_fields: bugFields });
   const [bugPayload, commentPayload, attachmentPayload] = await Promise.all([
-    request(`bug/${id}`, fields),
+    request(`bug/${id}`, { params: fields }),
     request(`bug/${id}/comment`),
     request(`bug/${id}/attachment`),
   ]);
@@ -160,4 +177,139 @@ export async function getBug(id: number): Promise<BugDetail> {
     comments: allComments.slice(1),
     attachments,
   };
+}
+
+const requiredFields: Record<string, string> = {
+  summary: "Summary",
+  status: "Status",
+  assignedTo: "Assignee",
+  component: "Component",
+};
+
+function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
+  const body: JsonRecord = { ids: [id] };
+  const fields: [keyof BugUpdate, string][] = [
+    ["summary", "summary"],
+    ["status", "status"],
+    ["resolution", "resolution"],
+    ["priority", "priority"],
+    ["severity", "severity"],
+    ["assignedTo", "assigned_to"],
+    ["component", "component"],
+    ["version", "version"],
+    ["platform", "platform"],
+  ];
+
+  for (const [key, field] of fields) {
+    const value = update[key];
+    if (typeof value !== "string") continue;
+    const trimmed =
+      key === "resolution" && value.trim() === "---" ? "" : value.trim();
+    if (!trimmed && requiredFields[key]) {
+      throw new Error(`${requiredFields[key]} cannot be empty.`);
+    }
+    body[field] = trimmed;
+  }
+
+  if (update.keywords !== undefined) {
+    if (!Array.isArray(update.keywords)) throw new Error("Keywords must be a list.");
+    body.keywords = {
+      set: update.keywords.map((keyword) => {
+        if (typeof keyword !== "string") throw new Error("Keywords must be text.");
+        return keyword.trim();
+      }).filter(Boolean),
+    };
+  }
+
+  if (Object.keys(body).length === 1) throw new Error("There is nothing to update.");
+  return body;
+}
+
+async function refreshBug(id: number, action: string): Promise<BugDetail> {
+  try {
+    return await getBug(id);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The bug could not be refreshed.";
+    throw new Error(`${action}, but the bug could not be refreshed. ${message}`);
+  }
+}
+
+export async function updateBug(id: number, update: BugUpdate): Promise<BugDetail> {
+  assertBugId(id);
+  await request(`bug/${id}`, {
+    method: "PUT",
+    body: bugzillaUpdateBody(id, update),
+  });
+  return refreshBug(id, "Saved");
+}
+
+export async function addComment(
+  id: number,
+  draft: BugCommentDraft,
+): Promise<BugDetail> {
+  assertBugId(id);
+  const text = draft.text.trim();
+  if (!text) throw new Error("Comment cannot be empty.");
+  if (text.length > 65_535) {
+    throw new Error("Comment must be 65,535 characters or fewer.");
+  }
+  await request(`bug/${id}/comment`, {
+    method: "POST",
+    body: {
+      comment: text,
+      is_private: draft.isPrivate === true,
+    },
+  });
+  return refreshBug(id, "Comment added");
+}
+
+function stripBase64(value: string): string {
+  const trimmed = value.trim();
+  const marker = "base64,";
+  const index = trimmed.lastIndexOf(marker);
+  const payload = index >= 0 ? trimmed.slice(index + marker.length) : trimmed;
+  return payload.replace(/\s/g, "");
+}
+
+export async function addAttachment(
+  id: number,
+  draft: BugAttachmentDraft,
+): Promise<BugDetail> {
+  assertBugId(id);
+  const fileName = draft.fileName.trim().replace(/^.*[/\\]/, "");
+  if (!fileName) throw new Error("Attachment needs a file name.");
+  if (fileName.length > 255) {
+    throw new Error("Attachment file name must be 255 characters or fewer.");
+  }
+
+  const data = stripBase64(draft.data);
+  if (!data) throw new Error("Attachment is empty.");
+  if (Math.floor((data.length * 3) / 4) > MAX_ATTACHMENT_BYTES + 4) {
+    throw new Error("Attachments must be 10 MB or smaller.");
+  }
+  if (data.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
+    throw new Error("Attachment data must be base64.");
+  }
+  const bytes = Buffer.from(data, "base64").byteLength;
+  if (bytes === 0) throw new Error("Attachment is empty.");
+  if (bytes > MAX_ATTACHMENT_BYTES) {
+    throw new Error("Attachments must be 10 MB or smaller.");
+  }
+
+  const summary = (draft.summary?.trim() || fileName).slice(0, 255);
+  const comment = draft.comment?.trim() ?? "";
+  const body: JsonRecord = {
+    ids: [id],
+    file_name: fileName,
+    summary,
+    content_type: draft.contentType.trim() || "application/octet-stream",
+    data,
+    is_private: draft.isPrivate === true,
+  };
+  if (comment) body.comment = comment;
+  if (/\.(patch|diff)$/i.test(fileName)) body.is_patch = true;
+
+  await request(`bug/${id}/attachment`, { method: "POST", body });
+  return refreshBug(id, "Attachment uploaded");
 }

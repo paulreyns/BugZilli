@@ -23,7 +23,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -314,16 +316,26 @@ button:disabled {
 }
 
 .error-banner,
-.warning {
+.warning,
+.success-banner {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 16px;
   padding: 10px 12px;
-  color: #ae2a19;
-  background: #ffebe6;
   border-radius: 5px;
   font-size: 13px;
+}
+
+.error-banner,
+.warning {
+  color: #ae2a19;
+  background: #ffebe6;
+}
+
+.success-banner {
+  color: #216e4e;
+  background: #dcfff1;
 }
 
 .issue-table-wrap {
@@ -787,6 +799,62 @@ button:disabled {
   border-bottom: 1px solid var(--border);
 }
 
+.detail-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.summary-input,
+.detail-control,
+.composer input:not([type="checkbox"]),
+.composer textarea {
+  width: 100%;
+  color: #172b4d;
+  border: 1px solid #b6bdc8;
+  border-radius: 4px;
+  outline: 0;
+  background: white;
+}
+
+.summary-input {
+  margin-top: 2px;
+  padding: 6px 10px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.45px;
+  line-height: 1.25;
+}
+
+.detail-control {
+  height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.summary-input:focus,
+.detail-control:focus,
+.composer input:not([type="checkbox"]):focus,
+.composer textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.summary-input:disabled,
+.detail-control:disabled,
+.composer input:not([type="checkbox"]):disabled,
+.composer textarea:disabled {
+  background: #f7f8fa;
+}
+
 .detail-title h1 {
   max-width: 850px;
   font-size: 27px;
@@ -1007,6 +1075,119 @@ button:disabled {
   overflow-wrap: anywhere;
   font-size: 12px;
   font-weight: 500;
+}
+
+.field-hint {
+  margin: -8px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.composer .field-hint {
+  margin: 0;
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.composer > label:not(.file-field):not(.check-inline) {
+  color: #44546f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.composer input:not([type="checkbox"]),
+.composer textarea {
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.composer textarea {
+  min-height: 76px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.check-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  color: #44546f;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.check-inline input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--blue);
+}
+
+.file-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #44546f;
+  border: 1px dashed #b6bdc8;
+  border-radius: 6px;
+  background: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.file-field:hover {
+  border-color: var(--blue);
+  background: #f7faff;
+}
+
+.file-field span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.composer-error {
+  margin: 0;
+  color: #ae2a19;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .keyword-list {
