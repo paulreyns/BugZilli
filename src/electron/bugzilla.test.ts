@@ -88,8 +88,24 @@ describe("Bugzilla API client", () => {
           bugs: {
             "42": {
               comments: [
-                { id: 1, creator: "reporter", text: "Steps to reproduce" },
-                { id: 2, creator: "developer", text: "Confirmed" },
+                {
+                  id: 1,
+                  creator: "reporter",
+                  creation_time: "2024-01-01T09:00:00Z",
+                  text: "Steps to reproduce",
+                },
+                {
+                  id: 2,
+                  creator: "developer",
+                  creation_time: "2024-01-02T09:00:00Z",
+                  text: "Confirmed",
+                },
+                {
+                  id: 3,
+                  creator: "developer",
+                  creation_time: "2024-01-03T09:00:00Z",
+                  text: "Follow-up",
+                },
               ],
             },
           },
@@ -113,7 +129,10 @@ describe("Bugzilla API client", () => {
     const bug = await getBug(42);
 
     expect(bug.description).toBe("Steps to reproduce");
-    expect(bug.comments).toHaveLength(1);
+    expect(bug.comments.map((comment) => comment.text)).toEqual([
+      "Follow-up",
+      "Confirmed",
+    ]);
     expect(bug.attachments[0]?.fileName).toBe("screenshot.png");
     for (const [url] of fetchMock.mock.calls as [URL, RequestInit][]) {
       expect(url.searchParams.get("api_key")).toBe("secret");

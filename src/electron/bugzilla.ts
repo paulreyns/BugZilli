@@ -161,6 +161,10 @@ export async function getBug(id: number): Promise<BugDetail> {
   const allComments = Array.isArray(commentContainer?.comments)
     ? commentContainer.comments.map((comment) => mapComment(comment as JsonRecord))
     : [];
+  const comments = allComments.slice(1).sort(
+    (left, right) =>
+      Date.parse(right.creationTime) - Date.parse(left.creationTime),
+  );
 
   const attachmentBugs = attachmentPayload.bugs as JsonRecord | undefined;
   const attachmentValues = attachmentBugs?.[String(id)];
@@ -174,7 +178,7 @@ export async function getBug(id: number): Promise<BugDetail> {
   return {
     ...bug,
     description: allComments[0]?.text ?? "",
-    comments: allComments.slice(1),
+    comments,
     attachments,
   };
 }
