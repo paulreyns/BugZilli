@@ -11,6 +11,8 @@ the only source of data.
 - Search and refresh project issues
 - Browse issues in a table or status-grouped board
 - View the description near the top of each bug
+- Press `Ctrl+G` to jump straight to a bug by ID (pre-filled from a numeric
+  clipboard value)
 - Browse comments and attachments in separate tabs
 - Open attachments through the system browser
 

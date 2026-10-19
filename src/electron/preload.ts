@@ -22,6 +22,7 @@ const api: BugzilliApi = {
     ipcRenderer.invoke("bugs:attachment", id, attachment),
   openAttachment: (id: number) =>
     ipcRenderer.invoke("attachments:open", id),
+  readClipboardText: () => ipcRenderer.invoke("clipboard:read-text"),
 };
 
 contextBridge.exposeInMainWorld("bugzilli", api);

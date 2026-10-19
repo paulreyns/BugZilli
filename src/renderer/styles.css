@@ -1251,6 +1251,70 @@ button:disabled {
   font-size: 13px;
 }
 
+.go-to-bug-dialog {
+  width: 380px;
+  margin-top: 18vh;
+  padding: 0;
+  color: #172b4d;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px #091e4240;
+}
+
+.go-to-bug-dialog::backdrop {
+  background: #091e4266;
+}
+
+.go-to-bug-dialog form {
+  padding: 18px 20px 20px;
+}
+
+.go-to-bug-dialog header,
+.go-to-bug-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.go-to-bug-dialog h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.go-to-bug-field {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 0 10px;
+  color: var(--muted);
+  border: 1px solid #b6bdc8;
+  border-radius: 5px;
+}
+
+.go-to-bug-field:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.go-to-bug-field input {
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #172b4d;
+}
+
+.go-to-bug-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .app-loader {
   width: 25px;
   height: 25px;

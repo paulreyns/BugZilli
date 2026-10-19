@@ -108,4 +108,5 @@ export interface BugzilliApi {
   addComment(id: number, comment: BugCommentDraft): Promise<BugDetail>;
   addAttachment(id: number, attachment: BugAttachmentDraft): Promise<BugDetail>;
   openAttachment(id: number): Promise<void>;
+  readClipboardText(): Promise<string>;
 }

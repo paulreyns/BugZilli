@@ -10,6 +10,7 @@ import type {
 } from "../shared/types";
 import { BugDetailPage } from "./components/BugDetailPage";
 import { BugsPage } from "./components/BugsPage";
+import { GoToBugDialog } from "./components/GoToBugDialog";
 import { SettingsPage } from "./components/SettingsPage";
 import { Sidebar, type Page } from "./components/Sidebar";
 import { errorMessage } from "./errors";
@@ -71,6 +72,24 @@ export default function App() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [startupError, setStartupError] = useState("");
+  const [goToBugOpen, setGoToBugOpen] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        !event.metaKey &&
+        event.key.toLowerCase() === "g"
+      ) {
+        event.preventDefault();
+        setGoToBugOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     window.bugzilli
@@ -261,6 +280,15 @@ export default function App() {
         }}
       />
       <div className="content">{content}</div>
+      {goToBugOpen && (
+        <GoToBugDialog
+          onClose={() => setGoToBugOpen(false)}
+          onGo={(id) => {
+            setGoToBugOpen(false);
+            void openBug(id);
+          }}
+        />
+      )}
     </div>
   );
 }
