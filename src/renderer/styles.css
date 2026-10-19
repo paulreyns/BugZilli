@@ -697,6 +697,10 @@ button:disabled {
   border-radius: 6px;
 }
 
+.project-editor.scoped {
+  grid-template-columns: 42px minmax(160px, 1fr) minmax(180px, 1.2fr);
+}
+
 .project-editor.focused {
   border-color: #85b8ff;
   background: #f7faff;
