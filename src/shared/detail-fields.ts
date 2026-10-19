@@ -276,38 +276,38 @@ export function catalogFromBugRecord(
 }
 
 export function readBugFieldValue(bug: Bug, key: string): unknown {
-  const known = knownByKey.get(key);
-  if (known) {
-    switch (key) {
-      case "status":
-        return bug.status;
-      case "assignedTo":
-        return bug.assignedTo;
-      case "creator":
-        return bug.creator;
-      case "priority":
-        return bug.priority;
-      case "severity":
-        return bug.severity;
-      case "component":
-        return bug.component;
-      case "version":
-        return bug.version;
-      case "platform":
-        return bug.platform;
-      case "creationTime":
-        return bug.creationTime;
-      case "lastChangeTime":
-        return bug.lastChangeTime;
-      case "resolution":
-        return bug.resolution;
-      case "keywords":
-        return bug.keywords;
-      default:
-        break;
-    }
+  switch (key) {
+    case "id":
+      return bug.id;
+    case "summary":
+      return bug.summary;
+    case "status":
+      return bug.status;
+    case "assignedTo":
+      return bug.assignedTo;
+    case "creator":
+      return bug.creator;
+    case "priority":
+      return bug.priority;
+    case "severity":
+      return bug.severity;
+    case "component":
+      return bug.component;
+    case "version":
+      return bug.version;
+    case "platform":
+      return bug.platform;
+    case "creationTime":
+      return bug.creationTime;
+    case "lastChangeTime":
+      return bug.lastChangeTime;
+    case "resolution":
+      return bug.resolution;
+    case "keywords":
+      return bug.keywords;
+    default:
+      return bug.extraFields?.[key];
   }
-  return bug.extraFields?.[key];
 }
 
 export function formatExtraFieldValue(value: unknown): string {

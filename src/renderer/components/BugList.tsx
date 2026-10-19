@@ -1,9 +1,18 @@
 import { AlertCircle, ChevronRight, CircleUserRound } from "lucide-react";
+import {
+  formatExtraFieldValue,
+  readBugFieldValue,
+} from "../../shared/detail-fields";
+import {
+  listColumnDefinition,
+  resolveListColumns,
+} from "../../shared/list-columns";
 import type { Bug } from "../../shared/types";
 import { EmptyState, initials, statusClass } from "./BugViewShared";
 
 interface BugListProps {
   bugs: Bug[];
+  listColumns?: string[];
   onSelect: (id: number) => void;
 }
 
@@ -16,67 +25,99 @@ function displayDate(value: string): string {
   }).format(new Date(value));
 }
 
-export function BugList({ bugs, onSelect }: BugListProps) {
+function isDateColumn(key: string): boolean {
+  return (
+    listColumnDefinition(key).format === "date" ||
+    key === "creationTime" ||
+    key === "lastChangeTime" ||
+    key === "deadline"
+  );
+}
+
+function ColumnCell({ bug, column }: { bug: Bug; column: string }) {
+  switch (column) {
+    case "id":
+      return (
+        <span className="bug-key">
+          <span className="bug-type-icon">
+            <AlertCircle size={12} />
+          </span>
+          {bug.id}
+        </span>
+      );
+    case "summary":
+      return (
+        <>
+          <strong>{bug.summary}</strong>
+          {bug.component ? <span>{bug.component}</span> : null}
+        </>
+      );
+    case "assignedTo": {
+      const assignee = bug.assignedToName || bug.assignedTo;
+      return (
+        <span className="assignee">
+          <span className="avatar">
+            {initials(assignee) || <CircleUserRound size={16} />}
+          </span>
+          {assignee || "Unassigned"}
+        </span>
+      );
+    }
+    case "status":
+      return (
+        <span className={`status-pill ${statusClass(bug.status)}`}>
+          {(bug.status || "—").replaceAll("_", " ")}
+        </span>
+      );
+    default: {
+      const raw = readBugFieldValue(bug, column);
+      if (isDateColumn(column) && typeof raw === "string") {
+        return <>{displayDate(raw)}</>;
+      }
+      const formatted = formatExtraFieldValue(raw).trim();
+      return <>{formatted || "—"}</>;
+    }
+  }
+}
+
+export function BugList({ bugs, listColumns, onSelect }: BugListProps) {
+  const columns = resolveListColumns(listColumns);
+
   if (bugs.length === 0) return <EmptyState />;
   return (
     <div className="issue-table-wrap">
       <table className="issue-table">
         <thead>
           <tr>
-            <th>Key</th>
-            <th>Summary</th>
-            <th>Assignee</th>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Updated</th>
+            {columns.map((column) => (
+              <th key={column}>{listColumnDefinition(column).label}</th>
+            ))}
             <th aria-label="Open" />
           </tr>
         </thead>
         <tbody>
-          {bugs.map((bug) => {
-            const assignee = bug.assignedToName || bug.assignedTo;
-            return (
-              <tr
-                key={bug.id}
-                onClick={() => onSelect(bug.id)}
-                tabIndex={0}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") onSelect(bug.id);
-                }}
-              >
-                <td>
-                  <span className="bug-key">
-                    <span className="bug-type-icon">
-                      <AlertCircle size={12} />
-                    </span>
-                    {bug.id}
-                  </span>
+          {bugs.map((bug) => (
+            <tr
+              key={bug.id}
+              onClick={() => onSelect(bug.id)}
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") onSelect(bug.id);
+              }}
+            >
+              {columns.map((column) => (
+                <td
+                  key={column}
+                  className={column === "summary" ? "summary-cell" : undefined}
+                >
+                  <ColumnCell bug={bug} column={column} />
                 </td>
-                <td className="summary-cell">
-                  <strong>{bug.summary}</strong>
-                  <span>{bug.component}</span>
-                </td>
-                <td>
-                  <span className="assignee">
-                    <span className="avatar">
-                      {initials(assignee) || <CircleUserRound size={16} />}
-                    </span>
-                    {assignee || "Unassigned"}
-                  </span>
-                </td>
-                <td>{bug.priority || "—"}</td>
-                <td>
-                  <span className={`status-pill ${statusClass(bug.status)}`}>
-                    {bug.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-                <td>{displayDate(bug.lastChangeTime)}</td>
-                <td>
-                  <ChevronRight size={16} />
-                </td>
-              </tr>
-            );
-          })}
+              ))}
+              <td>
+                <ChevronRight size={16} />
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

@@ -12,6 +12,12 @@ vi.mock("./settings.js", () => ({
         product: "Browser",
         showClosedBugs: true,
       },
+      {
+        id: "custom-list",
+        name: "Custom list",
+        product: "Browser",
+        listColumns: ["id", "summary", "whiteboard", "severity"],
+      },
     ],
   }),
 }));
@@ -86,6 +92,30 @@ describe("Bugzilla API client", () => {
 
     const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(url.searchParams.has("resolution")).toBe(false);
+  });
+
+  it("requests configured list column fields when searching", async () => {
+    fetchMock.mockResolvedValue(
+      response({
+        bugs: [
+          {
+            id: 7,
+            summary: "Custom columns",
+            severity: "major",
+            whiteboard: "[triaged]",
+          },
+        ],
+      }),
+    );
+
+    const bugs = await searchBugs({ projectId: "custom-list" });
+    expect(bugs[0]?.extraFields).toMatchObject({ whiteboard: "[triaged]" });
+
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    const includeFields = url.searchParams.get("include_fields") ?? "";
+    expect(includeFields).toContain("whiteboard");
+    expect(includeFields).toContain("severity");
+    expect(includeFields).toContain("assigned_to_detail");
   });
 
   it("uses the first comment as the description and keeps later comments", async () => {

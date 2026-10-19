@@ -6,6 +6,8 @@ export interface Project {
   showClosedBugs?: boolean;
   /** Ordered Bug Details sidebar fields. Defaults to the built-in layout when omitted. */
   detailFields?: string[];
+  /** Ordered Issues table columns. Defaults to the built-in layout when omitted. */
+  listColumns?: string[];
 }
 
 export interface DetailFieldOption {
