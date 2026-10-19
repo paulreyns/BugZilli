@@ -88,6 +88,7 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
     limit: String(Math.min(Math.max(search.limit ?? 200, 1), 500)),
     order: "changeddate DESC",
   });
+  if (!project.showClosedBugs) params.set("resolution", "---");
   if (search.query?.trim()) params.set("quicksearch", search.query.trim());
 
   const payload = await request("bug", params);

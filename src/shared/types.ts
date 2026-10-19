@@ -3,6 +3,7 @@ export interface Project {
   name: string;
   product: string;
   description?: string;
+  showClosedBugs?: boolean;
 }
 
 export interface AppSettings {

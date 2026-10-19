@@ -699,7 +699,39 @@ button:disabled {
 }
 
 .project-editor .icon-button {
+  grid-column: 4;
+  grid-row: 1;
   margin-bottom: 4px;
+}
+
+.project-editor .checkbox-setting {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.project-editor .checkbox-setting input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--blue);
+}
+
+.project-editor .checkbox-setting span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.project-editor .checkbox-setting small {
+  color: #626f86;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .empty-projects {

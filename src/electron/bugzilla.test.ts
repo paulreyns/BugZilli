@@ -4,7 +4,15 @@ vi.mock("./settings.js", () => ({
   getConnection: vi.fn().mockResolvedValue({
     baseUrl: "https://bugs.example.com",
     apiKey: "secret",
-    projects: [{ id: "browser", name: "Browser", product: "Browser" }],
+    projects: [
+      { id: "browser", name: "Browser", product: "Browser" },
+      {
+        id: "all-browser",
+        name: "All Browser bugs",
+        product: "Browser",
+        showClosedBugs: true,
+      },
+    ],
   }),
 }));
 
@@ -53,9 +61,19 @@ describe("Bugzilla API client", () => {
     const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(url.searchParams.get("product")).toBe("Browser");
     expect(url.searchParams.get("quicksearch")).toBe("toolbar");
+    expect(url.searchParams.get("resolution")).toBe("---");
     expect(options.headers).toMatchObject({
       "X-BUGZILLA-API-KEY": "secret",
     });
+  });
+
+  it("includes resolved bugs when enabled for the project", async () => {
+    fetchMock.mockResolvedValue(response({ bugs: [] }));
+
+    await searchBugs({ projectId: "all-browser" });
+
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.searchParams.has("resolution")).toBe(false);
   });
 
   it("uses the first comment as the description and keeps later comments", async () => {

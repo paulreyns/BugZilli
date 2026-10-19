@@ -42,6 +42,7 @@ export function SettingsPage({
       id: crypto.randomUUID(),
       name: "New product",
       product: "",
+      showClosedBugs: false,
     };
     setProjects((current) => [...current, project]);
   }
@@ -204,6 +205,21 @@ export function SettingsPage({
                     }
                     required
                   />
+                </label>
+                <label className="checkbox-setting">
+                  <input
+                    type="checkbox"
+                    checked={project.showClosedBugs ?? false}
+                    onChange={(event) =>
+                      updateProject(project.id, {
+                        showClosedBugs: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    Show closed bugs
+                    <small>Include resolved bugs in this project's lists.</small>
+                  </span>
                 </label>
                 <button
                   type="button"
