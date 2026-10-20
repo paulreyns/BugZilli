@@ -94,6 +94,37 @@ describe("Bugzilla API client", () => {
     expect(url.searchParams.has("resolution")).toBe(false);
   });
 
+  it("keeps the project closed-bug setting authoritative over resolution filters", async () => {
+    expect(
+      await searchBugs({
+        projectId: "browser",
+        filters: [{ field: "resolution", value: "FIXED" }],
+      }),
+    ).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fetchMock.mockResolvedValue(response({ bugs: [] }));
+    await searchBugs({
+      projectId: "browser",
+      filters: [{ field: "resolution", value: "---" }],
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.searchParams.getAll("resolution")).toEqual(["---"]);
+  });
+
+  it("applies resolution filters when the project includes closed bugs", async () => {
+    fetchMock.mockResolvedValue(response({ bugs: [] }));
+
+    await searchBugs({
+      projectId: "all-browser",
+      filters: [{ field: "resolution", value: "FIXED" }],
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.searchParams.getAll("resolution")).toEqual(["FIXED"]);
+  });
+
   it("passes selected field filters through to the Bugzilla search", async () => {
     fetchMock.mockResolvedValue(response({ bugs: [] }));
 

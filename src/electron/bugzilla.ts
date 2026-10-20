@@ -3,7 +3,10 @@ import {
   catalogFromBugRecord,
   keyForBugzillaField,
 } from "../shared/detail-fields.js";
-import { appendFilterParams } from "../shared/list-filters.js";
+import {
+  appendFilterParams,
+  cleanFilterRules,
+} from "../shared/list-filters.js";
 import { resolveListColumns } from "../shared/list-columns.js";
 import {
   MAX_ATTACHMENT_BYTES,
@@ -177,6 +180,18 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
   const project = projects.find(({ id }) => id === search.projectId);
   if (!project) throw new Error("The selected project no longer exists.");
 
+  const filters = cleanFilterRules(search.filters);
+  const resolutionFilter = filters.find(
+    ({ field }) => bugzillaNameForKey(field) === "resolution",
+  );
+  if (
+    !project.showClosedBugs &&
+    resolutionFilter &&
+    resolutionFilter.value !== "---"
+  ) {
+    return [];
+  }
+
   const params = new URLSearchParams({
     product: project.product,
     include_fields: includeFieldsForProject(project),
@@ -185,7 +200,12 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
   });
   if (!project.showClosedBugs) params.set("resolution", "---");
   if (search.query?.trim()) params.set("quicksearch", search.query.trim());
-  appendFilterParams(params, search.filters);
+  appendFilterParams(
+    params,
+    project.showClosedBugs
+      ? filters
+      : filters.filter(({ field }) => bugzillaNameForKey(field) !== "resolution"),
+  );
 
   const payload = await request("bug", { params });
   return Array.isArray(payload.bugs)
