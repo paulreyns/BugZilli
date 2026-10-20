@@ -138,6 +138,8 @@ export interface BugUpdate {
   version?: string;
   platform?: string;
   keywords?: string[];
+  /** Custom / uncommon Bugzilla fields keyed by app field key (e.g. cf_team). */
+  extraFields?: Record<string, string>;
 }
 
 export interface BugCommentDraft {

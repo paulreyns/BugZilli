@@ -1,3 +1,4 @@
+import { isExtraDetailField } from "./detail-fields.js";
 import type { Bug, BugUpdate } from "./types.js";
 
 export interface BugDraft {
@@ -11,6 +12,8 @@ export interface BugDraft {
   version: string;
   platform: string;
   keywords: string;
+  /** Draft values for custom / uncommon fields shown in Details. */
+  extraFields: Record<string, string>;
 }
 
 export const STATUS_SUGGESTIONS = [
@@ -69,7 +72,15 @@ export function parseKeywords(value: string): string[] {
     .filter((keyword) => keyword.length > 0);
 }
 
-export function draftFromBug(bug: Bug): BugDraft {
+export function draftFromBug(
+  bug: Bug,
+  detailFieldKeys: string[] = [],
+): BugDraft {
+  const extraFields: Record<string, string> = { ...(bug.extraFields ?? {}) };
+  for (const key of detailFieldKeys) {
+    if (!isExtraDetailField(key)) continue;
+    if (!(key in extraFields)) extraFields[key] = "";
+  }
   return {
     summary: bug.summary,
     status: bug.status,
@@ -81,6 +92,7 @@ export function draftFromBug(bug: Bug): BugDraft {
     version: bug.version,
     platform: bug.platform,
     keywords: bug.keywords.join(", "),
+    extraFields,
   };
 }
 
@@ -126,6 +138,19 @@ export function buildBugUpdate(bug: Bug, draft: BugDraft): BugUpdate {
   if (resolution !== normalizeResolution(bug.resolution) && !isOpenStatus(status)) {
     update.resolution = resolution;
   }
+
+  const extraFields: Record<string, string> = {};
+  const draftKeys = new Set([
+    ...Object.keys(draft.extraFields),
+    ...Object.keys(bug.extraFields ?? {}),
+  ]);
+  for (const key of draftKeys) {
+    if (!isExtraDetailField(key)) continue;
+    const next = (draft.extraFields[key] ?? "").trim();
+    const current = (bug.extraFields?.[key] ?? "").trim();
+    if (next !== current) extraFields[key] = next;
+  }
+  if (Object.keys(extraFields).length > 0) update.extraFields = extraFields;
 
   return update;
 }
