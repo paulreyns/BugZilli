@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveDetailFields } from "../shared/detail-fields";
 import {
+  ALL_FILTER_ID,
   parseSelectedFilters,
   resolveSelectedFilterId,
   rulesForSelectedFilter,
@@ -276,6 +277,39 @@ export default function App() {
     }
   }
 
+  async function updateProjectFilter(projectId: string, filter: SavedFilter) {
+    if (!settings || filter.id === ALL_FILTER_ID) return;
+    const projects = settings.projects.map((project) => {
+      if (project.id !== projectId) return project;
+      const filters = project.filters ?? [];
+      if (!filters.some(({ id }) => id === filter.id)) return project;
+      return {
+        ...project,
+        filters: filters.map((existing) =>
+          existing.id === filter.id ? filter : existing,
+        ),
+      };
+    });
+    await save({ baseUrl: settings.baseUrl, projects });
+  }
+
+  async function deleteProjectFilter(projectId: string, filterId: string) {
+    if (!settings || filterId === ALL_FILTER_ID) return;
+    const project = settings.projects.find(({ id }) => id === projectId);
+    if (!project?.filters?.some(({ id }) => id === filterId)) return;
+    const projects = settings.projects.map((entry) => {
+      if (entry.id !== projectId) return entry;
+      const remaining = (entry.filters ?? []).filter(({ id }) => id !== filterId);
+      const { filters: _removed, ...rest } = entry;
+      return remaining.length > 0 ? { ...rest, filters: remaining } : rest;
+    });
+    await save({ baseUrl: settings.baseUrl, projects });
+    setSelectedFilters((current) => {
+      if (current[project.product] !== filterId) return current;
+      return { ...current, [project.product]: ALL_FILTER_ID };
+    });
+  }
+
   if (startupError) {
     return (
       <div className="startup-state">
@@ -355,6 +389,12 @@ export default function App() {
         }}
         onAddFilter={(filter) => {
           void addProjectFilter(activeProject.id, filter);
+        }}
+        onUpdateFilter={(filter) => {
+          void updateProjectFilter(activeProject.id, filter);
+        }}
+        onDeleteFilter={(filterId) => {
+          void deleteProjectFilter(activeProject.id, filterId);
         }}
         onSelectBug={(id) => void openBug(id)}
       />

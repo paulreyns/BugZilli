@@ -10,6 +10,8 @@ import { errorMessage } from "../errors";
 
 interface AddFilterDialogProps {
   product: string;
+  /** When set, the dialog edits this filter instead of creating a new one. */
+  initialFilter?: SavedFilter;
   onSave: (filter: SavedFilter) => void;
   onClose: () => void;
 }
@@ -28,12 +30,18 @@ function emptyRule(): FilterRule {
 
 export function AddFilterDialog({
   product,
+  initialFilter,
   onSave,
   onClose,
 }: AddFilterDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [name, setName] = useState("");
-  const [rules, setRules] = useState<FilterRule[]>([emptyRule()]);
+  const editing = Boolean(initialFilter);
+  const [name, setName] = useState(initialFilter?.name ?? "");
+  const [rules, setRules] = useState<FilterRule[]>(
+    initialFilter?.rules.length
+      ? initialFilter.rules.map((rule) => ({ ...rule }))
+      : [emptyRule()],
+  );
   const [fields, setFields] = useState<DetailFieldOption[]>(defaultFieldOptions);
   const [loadingFields, setLoadingFields] = useState(false);
   const [fieldsError, setFieldsError] = useState("");
@@ -91,7 +99,7 @@ export function AddFilterDialog({
       value: rule.value.trim(),
     }));
     onSave({
-      id: crypto.randomUUID(),
+      id: initialFilter?.id ?? crypto.randomUUID(),
       name: name.trim() || summarizeRules(savedRules),
       rules: savedRules,
     });
@@ -112,7 +120,9 @@ export function AddFilterDialog({
     >
       <form onSubmit={submit}>
         <header>
-          <h2 id="add-filter-title">Add filter</h2>
+          <h2 id="add-filter-title">
+            {editing ? "Edit filter" : "Add filter"}
+          </h2>
           <button
             type="button"
             className="icon-button"
