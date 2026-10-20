@@ -1,5 +1,6 @@
 import { AlertCircle, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
+import { ALL_FILTER_ID } from "../../shared/list-filters";
 import type { Bug, Project, SavedFilter } from "../../shared/types";
 import type { Page } from "./Sidebar";
 import { AddFilterDialog } from "./AddFilterDialog";
@@ -20,6 +21,8 @@ interface BugsPageProps {
   onRefresh: () => void;
   onSelectFilter: (filterId: string) => void;
   onAddFilter: (filter: SavedFilter) => void;
+  onUpdateFilter: (filter: SavedFilter) => void;
+  onDeleteFilter: (filterId: string) => void;
   onSelectBug: (id: number) => void;
 }
 
@@ -37,9 +40,18 @@ export function BugsPage(props: BugsPageProps) {
     onRefresh,
     onSelectFilter,
     onAddFilter,
+    onUpdateFilter,
+    onDeleteFilter,
     onSelectBug,
   } = props;
-  const [addFilterOpen, setAddFilterOpen] = useState(false);
+  const [filterDialog, setFilterDialog] = useState<
+    { mode: "add" } | { mode: "edit"; filter: SavedFilter } | null
+  >(null);
+
+  const selectedFilter =
+    selectedFilterId !== ALL_FILTER_ID
+      ? project.filters?.find((filter) => filter.id === selectedFilterId)
+      : undefined;
 
   return (
     <main className="page bugs-page">
@@ -67,7 +79,15 @@ export function BugsPage(props: BugsPageProps) {
           filters={project.filters ?? []}
           selectedId={selectedFilterId}
           onSelect={onSelectFilter}
-          onAddFilter={() => setAddFilterOpen(true)}
+          onAddFilter={() => setFilterDialog({ mode: "add" })}
+          onEditFilter={() => {
+            if (!selectedFilter) return;
+            setFilterDialog({ mode: "edit", filter: selectedFilter });
+          }}
+          onDeleteFilter={() => {
+            if (!selectedFilter) return;
+            onDeleteFilter(selectedFilter.id);
+          }}
           disabled={loading}
         />
         <form
@@ -112,13 +132,20 @@ export function BugsPage(props: BugsPageProps) {
         <BugBoard bugs={bugs} onSelect={onSelectBug} />
       )}
 
-      {addFilterOpen && (
+      {filterDialog && (
         <AddFilterDialog
           product={project.product}
-          onClose={() => setAddFilterOpen(false)}
+          {...(filterDialog.mode === "edit"
+            ? { initialFilter: filterDialog.filter }
+            : {})}
+          onClose={() => setFilterDialog(null)}
           onSave={(filter) => {
-            setAddFilterOpen(false);
-            onAddFilter(filter);
+            setFilterDialog(null);
+            if (filterDialog.mode === "edit") {
+              onUpdateFilter(filter);
+            } else {
+              onAddFilter(filter);
+            }
           }}
         />
       )}
