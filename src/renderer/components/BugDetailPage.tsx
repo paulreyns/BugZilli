@@ -6,6 +6,7 @@ import {
   Component,
   Download,
   File,
+  Link,
   MessageSquare,
   Monitor,
   Paperclip,
@@ -48,6 +49,7 @@ import { errorMessage } from "../errors";
 
 interface BugDetailPageProps {
   bug?: BugDetail;
+  baseUrl: string;
   loading: boolean;
   error: string;
   detailFields?: string[];
@@ -80,6 +82,7 @@ function resolutionLabel(value: string): string {
 
 export function BugDetailPage({
   bug,
+  baseUrl,
   loading,
   error,
   detailFields,
@@ -189,6 +192,18 @@ export function BugDetailPage({
     });
   }
 
+  async function copyBugzillaLink() {
+    if (!bug) return;
+    try {
+      await window.bugzilli.writeClipboardText(
+        `${baseUrl}/show_bug.cgi?id=${bug.id}`,
+      );
+      setFeedback({ tone: "success", text: "Bugzilla link copied to clipboard." });
+    } catch (caught) {
+      setFeedback({ tone: "error", text: errorMessage(caught) });
+    }
+  }
+
   async function save() {
     if (!bug || !draft || pendingRef.current) return;
     const problem = validateBugDraft(bug, draft, fieldTypes);
@@ -267,7 +282,19 @@ export function BugDetailPage({
       <div className="detail-title">
         <div className="detail-heading">
           <p className="breadcrumbs">
-            {bug.product} / {form?.component || bug.component} / {bug.id}
+            {bug.product} / {form?.component || bug.component} /{" "}
+            <span className="bug-id-copy">
+              {bug.id}
+              <button
+                type="button"
+                className="bug-id-copy-button"
+                aria-label="Copy Bugzilla link"
+                title="Copy Bugzilla link"
+                onClick={() => void copyBugzillaLink()}
+              >
+                <Link size={13} aria-hidden="true" />
+              </button>
+            </span>
           </p>
           {form ? (
             <input
