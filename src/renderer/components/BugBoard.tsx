@@ -1,23 +1,25 @@
+import { groupBugsByBoardStatus } from "../../shared/board-statuses";
 import type { Bug } from "../../shared/types";
-import { EmptyState, initials, statusClass } from "./BugViewShared";
+import { initials, statusClass } from "./BugViewShared";
 
 interface BugBoardProps {
   bugs: Bug[];
+  boardStatuses?: string[];
+  showClosedBugs?: boolean;
   onSelect: (id: number) => void;
 }
 
-export function BugBoard({ bugs, onSelect }: BugBoardProps) {
-  if (bugs.length === 0) return <EmptyState />;
-  const groups = new Map<string, Bug[]>();
-  for (const bug of bugs) {
-    const values = groups.get(bug.status) ?? [];
-    values.push(bug);
-    groups.set(bug.status, values);
-  }
+export function BugBoard({
+  bugs,
+  boardStatuses,
+  showClosedBugs,
+  onSelect,
+}: BugBoardProps) {
+  const columns = groupBugsByBoardStatus(bugs, boardStatuses, showClosedBugs);
 
   return (
     <div className="board">
-      {[...groups.entries()].map(([status, statusBugs]) => (
+      {columns.map(({ status, bugs: statusBugs }) => (
         <section className="board-column" key={status}>
           <header>
             <span className={`status-dot ${statusClass(status)}`} />

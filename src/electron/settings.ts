@@ -54,6 +54,7 @@ function cleanProjects(projects: Project[]): Project[] {
     }
     const detailFields = cleanFieldKeys(project.detailFields);
     const listColumns = cleanFieldKeys(project.listColumns);
+    const boardStatuses = cleanFieldKeys(project.boardStatuses);
     const filters = cleanSavedFilters(project.filters);
     return {
       id: project.id,
@@ -65,6 +66,7 @@ function cleanProjects(projects: Project[]): Project[] {
       ...(project.showClosedBugs ? { showClosedBugs: true } : {}),
       ...(detailFields ? { detailFields } : {}),
       ...(listColumns ? { listColumns } : {}),
+      ...(boardStatuses ? { boardStatuses } : {}),
       ...(filters ? { filters } : {}),
     };
   });

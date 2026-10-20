@@ -1,5 +1,6 @@
 import { KeyRound, Plus, Save, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { defaultBoardStatuses } from "../../shared/board-statuses";
 import { defaultDetailFields } from "../../shared/detail-fields";
 import { defaultListColumns } from "../../shared/list-columns";
 import type {
@@ -7,6 +8,7 @@ import type {
   Project,
   SettingsUpdate,
 } from "../../shared/types";
+import { BoardStatusesEditor } from "./BoardStatusesEditor";
 import { DetailFieldsEditor } from "./DetailFieldsEditor";
 import { ListColumnsEditor } from "./ListColumnsEditor";
 
@@ -49,6 +51,7 @@ export function SettingsPage({
       showClosedBugs: false,
       detailFields: defaultDetailFields(),
       listColumns: defaultListColumns(),
+      boardStatuses: defaultBoardStatuses(),
     };
     setProjects((current) => [...current, project]);
   }
@@ -88,7 +91,7 @@ export function SettingsPage({
           <h1>{scopedToProject ? "Project settings" : "App settings"}</h1>
           <p className="page-subtitle">
             {scopedToProject
-              ? `Configure how ${activeProject?.name ?? "this product"} appears, including list columns and detail fields.`
+              ? `Configure how ${activeProject?.name ?? "this product"} appears, including board columns, list columns, and detail fields.`
               : "Connect Bugzilli to your Bugzilla instance and choose which products appear as products."}
           </p>
         </div>
@@ -164,7 +167,7 @@ export function SettingsPage({
               <h2>{scopedToProject ? "Product" : "Products"}</h2>
               <p>
                 {scopedToProject
-                  ? "Display name, Bugzilla product mapping, list columns, and detail fields."
+                  ? "Display name, Bugzilla product mapping, board columns, list columns, and detail fields."
                   : "Each product maps to a Bugzilla product name."}
               </p>
             </div>
@@ -230,9 +233,19 @@ export function SettingsPage({
                   />
                   <span>
                     Show closed bugs
-                    <small>Include resolved bugs in this project's lists.</small>
+                    <small>
+                      Include resolved bugs in lists and show the Closed column
+                      on the Board.
+                    </small>
                   </span>
                 </label>
+                <BoardStatusesEditor
+                  boardStatuses={project.boardStatuses}
+                  showClosedBugs={project.showClosedBugs ?? false}
+                  onChange={(statuses) =>
+                    updateProject(project.id, { boardStatuses: statuses })
+                  }
+                />
                 <ListColumnsEditor
                   product={project.product}
                   listColumns={project.listColumns}
