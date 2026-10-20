@@ -297,6 +297,29 @@ export function catalogFromBugRecord(
   return ["status", ...preferred, ...rest].map((key) => catalog.get(key)!).filter(Boolean);
 }
 
+/** True when the field is stored on `Bug.extraFields` rather than a first-class property. */
+export function isExtraDetailField(key: string): boolean {
+  switch (key) {
+    case "id":
+    case "summary":
+    case "status":
+    case "assignedTo":
+    case "creator":
+    case "priority":
+    case "severity":
+    case "component":
+    case "version":
+    case "platform":
+    case "creationTime":
+    case "lastChangeTime":
+    case "resolution":
+    case "keywords":
+      return false;
+    default:
+      return true;
+  }
+}
+
 export function readBugFieldValue(bug: Bug, key: string): unknown {
   switch (key) {
     case "id":

@@ -325,6 +325,26 @@ function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
     };
   }
 
+  if (update.extraFields !== undefined) {
+    if (
+      typeof update.extraFields !== "object" ||
+      update.extraFields === null ||
+      Array.isArray(update.extraFields)
+    ) {
+      throw new Error("Custom fields must be a map of text values.");
+    }
+    for (const [key, value] of Object.entries(update.extraFields)) {
+      if (typeof value !== "string") {
+        throw new Error("Custom field values must be text.");
+      }
+      const field = bugzillaNameForKey(key);
+      if (!field || field === "ids") {
+        throw new Error(`Invalid custom field "${key}".`);
+      }
+      body[field] = value.trim();
+    }
+  }
+
   if (Object.keys(body).length === 1) throw new Error("There is nothing to update.");
   return body;
 }

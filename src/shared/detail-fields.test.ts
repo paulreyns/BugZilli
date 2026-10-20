@@ -4,6 +4,7 @@ import {
   catalogFromBugRecord,
   defaultDetailFields,
   detailFieldDefinition,
+  isExtraDetailField,
   resolveDetailFields,
 } from "./detail-fields.js";
 
@@ -46,6 +47,14 @@ describe("detail fields", () => {
     expect(detailFieldDefinition("cf_crash_signature").label).toBe(
       "Crash Signature",
     );
+  });
+
+  it("treats uncommon and custom keys as extra detail fields", () => {
+    expect(isExtraDetailField("status")).toBe(false);
+    expect(isExtraDetailField("assignedTo")).toBe(false);
+    expect(isExtraDetailField("keywords")).toBe(false);
+    expect(isExtraDetailField("whiteboard")).toBe(true);
+    expect(isExtraDetailField("cf_team")).toBe(true);
   });
 
   it("maps REST field names to Custom Search chart names", () => {

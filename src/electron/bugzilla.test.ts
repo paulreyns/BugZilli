@@ -381,6 +381,54 @@ describe("Bugzilla API client", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("sends custom fields through the Bugzilla update body", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ bugs: [{ id: 42 }] }))
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar is clipped",
+              status: "NEW",
+              assigned_to: "dev@example.com",
+              creator: "reporter@example.com",
+              product: "Browser",
+              component: "UI",
+              priority: "P3",
+              severity: "normal",
+              version: "unspecified",
+              platform: "All",
+              resolution: "",
+              keywords: [],
+              creation_time: "2026-10-01T00:00:00Z",
+              last_change_time: "2026-10-02T00:00:00Z",
+              cf_team: "Apps",
+              whiteboard: "[ready]",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({ bugs: { "42": { comments: [{ id: 1, text: "Steps" }] } } }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+
+    await updateBug(42, {
+      extraFields: {
+        cf_team: " Apps ",
+        whiteboard: "[ready]",
+      },
+    });
+
+    const [, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(JSON.parse(String(options.body))).toEqual({
+      ids: [42],
+      cf_team: "Apps",
+      whiteboard: "[ready]",
+    });
+  });
+
   it("reports a failed refresh after a successful update", async () => {
     fetchMock.mockResolvedValueOnce(response({ bugs: [{ id: 42 }] }));
     fetchMock.mockResolvedValue(

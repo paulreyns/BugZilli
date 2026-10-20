@@ -24,10 +24,22 @@ const bug: Bug = {
   keywords: ["crash"],
   platform: "All",
   version: "unspecified",
+  extraFields: {
+    cf_team: "Core",
+    whiteboard: "[triaged]",
+  },
 };
 
 function draft(values: Partial<BugDraft> = {}): BugDraft {
-  return { ...draftFromBug(bug), ...values };
+  const base = draftFromBug(bug);
+  return {
+    ...base,
+    ...values,
+    extraFields: {
+      ...base.extraFields,
+      ...(values.extraFields ?? {}),
+    },
+  };
 }
 
 describe("bug update drafts", () => {
@@ -39,6 +51,29 @@ describe("bug update drafts", () => {
       keywords: ["crash", "regression"],
     });
     expect(validateBugDraft(bug, draft())).toBe("Change a field before saving.");
+  });
+
+  it("includes changed custom fields and seeds empty configured ones", () => {
+    expect(draftFromBug(bug, ["cf_team", "cf_blocking", "priority"]).extraFields).toEqual(
+      {
+        cf_team: "Core",
+        whiteboard: "[triaged]",
+        cf_blocking: "",
+      },
+    );
+    expect(
+      buildBugUpdate(bug, draft({ extraFields: { cf_team: " Apps " } })),
+    ).toEqual({
+      extraFields: { cf_team: "Apps" },
+    });
+    expect(
+      buildBugUpdate(bug, draft({ extraFields: { whiteboard: "" } })),
+    ).toEqual({
+      extraFields: { whiteboard: "" },
+    });
+    expect(
+      validateBugDraft(bug, draft({ extraFields: { cf_team: "Apps" } })),
+    ).toBeNull();
   });
 
   it("requires a resolution when closing and omits it when reopening", () => {

@@ -30,6 +30,7 @@ import {
 import {
   detailFieldDefinition,
   formatExtraFieldValue,
+  isExtraDetailField,
   readBugFieldValue,
   resolveDetailFields,
 } from "../../shared/detail-fields";
@@ -136,7 +137,7 @@ export function BugDetailPage({
 
   function beginEdit() {
     if (!bug) return;
-    setDraft(draftFromBug(bug));
+    setDraft(draftFromBug(bug, resolveDetailFields(detailFields)));
     setEditing(true);
     setFeedback(null);
   }
@@ -144,7 +145,13 @@ export function BugDetailPage({
   function updateDraft(values: Partial<BugDraft>) {
     setDraft((current) => {
       if (!current) return current;
-      const next = { ...current, ...values };
+      const next = {
+        ...current,
+        ...values,
+        ...(values.extraFields
+          ? { extraFields: { ...current.extraFields, ...values.extraFields } }
+          : {}),
+      };
       if (values.status !== undefined && isOpenStatus(values.status)) {
         next.resolution = "";
       }
@@ -599,6 +606,19 @@ function DetailField({
       default:
         break;
     }
+  }
+
+  if (form && isExtraDetailField(fieldKey)) {
+    return (
+      <TextControl
+        id={`bug-field-${fieldKey}`}
+        label={definition.label}
+        icon={icon}
+        value={form.extraFields[fieldKey] ?? ""}
+        disabled={pending}
+        onChange={(value) => onDraftChange({ extraFields: { [fieldKey]: value } })}
+      />
+    );
   }
 
   if (definition.format === "keywords") {
