@@ -312,8 +312,23 @@ export function bugzillaChartNameForKey(key: string): string {
   return CHART_FIELD_BY_BUGZILLA[bugzilla] ?? bugzilla;
 }
 
+/** Invert chart / field-API names (e.g. bug_status) back to REST names (status). */
+const REST_NAME_BY_FIELD_API = new Map(
+  Object.entries(CHART_FIELD_BY_BUGZILLA).map(([rest, api]) => [api, rest]),
+);
+
 export function keyForBugzillaField(bugzillaName: string): string {
-  return knownByBugzilla.get(bugzillaName)?.key ?? bugzillaName;
+  const known = knownByBugzilla.get(bugzillaName);
+  if (known) return known.key;
+
+  // `/rest/field/bug` and advanced search use chart names for some fields
+  // (bug_status, bug_severity, rep_platform, …) that differ from REST bug keys.
+  const restName = REST_NAME_BY_FIELD_API.get(bugzillaName);
+  if (restName) {
+    return knownByBugzilla.get(restName)?.key ?? restName;
+  }
+
+  return bugzillaName;
 }
 
 function humanizeFieldKey(key: string): string {
@@ -454,6 +469,13 @@ export function catalogFromFieldApi(
     if (!fieldVisibleForProduct(field, trimmedProduct)) continue;
 
     const key = keyForBugzillaField(name);
+    // Chart / field-API aliases (e.g. short_desc → summary) must still be excluded.
+    if (
+      EXCLUDED_BUGZILLA_FIELDS.has(key) ||
+      EXCLUDED_BUGZILLA_FIELDS.has(bugzillaNameForKey(key))
+    ) {
+      continue;
+    }
     const known = knownByKey.get(key);
     const displayName =
       typeof field.display_name === "string" ? field.display_name.trim() : "";

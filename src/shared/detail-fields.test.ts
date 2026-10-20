@@ -7,6 +7,7 @@ import {
   detailFieldDefinition,
   detailFieldTypeFromBugzilla,
   isExtraDetailField,
+  keyForBugzillaField,
   resolveDetailFields,
 } from "./detail-fields.js";
 
@@ -68,6 +69,16 @@ describe("detail fields", () => {
     expect(bugzillaChartNameForKey("cf_team")).toBe("cf_team");
   });
 
+  it("maps field API / chart names back to app keys", () => {
+    expect(keyForBugzillaField("status")).toBe("status");
+    expect(keyForBugzillaField("bug_status")).toBe("status");
+    expect(keyForBugzillaField("bug_severity")).toBe("severity");
+    expect(keyForBugzillaField("rep_platform")).toBe("platform");
+    expect(keyForBugzillaField("assigned_to")).toBe("assignedTo");
+    expect(keyForBugzillaField("status_whiteboard")).toBe("whiteboard");
+    expect(keyForBugzillaField("cf_team")).toBe("cf_team");
+  });
+
   it("builds a catalog from a sample Bugzilla bug payload", () => {
     const catalog = catalogFromBugRecord({
       id: 1,
@@ -125,7 +136,44 @@ describe("detail fields", () => {
           type: 1,
         },
         {
-          name: "whiteboard",
+          name: "bug_status",
+          display_name: "Status",
+          type: 2,
+          values: [
+            { name: "NEW", sort_key: 1 },
+            { name: "ASSIGNED", sort_key: 2 },
+            { name: "RESOLVED", sort_key: 3 },
+          ],
+        },
+        {
+          name: "bug_severity",
+          display_name: "Severity",
+          type: 2,
+          values: [
+            { name: "blocker", sort_key: 1 },
+            { name: "normal", sort_key: 2 },
+          ],
+        },
+        {
+          name: "rep_platform",
+          display_name: "Hardware",
+          type: 2,
+          values: [
+            { name: "All", sort_key: 1 },
+            { name: "x86_64", sort_key: 2 },
+          ],
+        },
+        {
+          name: "priority",
+          display_name: "Priority",
+          type: 2,
+          values: [
+            { name: "P1", sort_key: 1 },
+            { name: "P2", sort_key: 2 },
+          ],
+        },
+        {
+          name: "status_whiteboard",
           display_name: "Whiteboard",
           type: 1,
         },
@@ -196,7 +244,25 @@ describe("detail fields", () => {
     const byKey = new Map(catalog.map((option) => [option.key, option]));
     expect(byKey.has("summary")).toBe(false);
     expect(byKey.has("depends_on")).toBe(false);
+    expect(byKey.has("bug_status")).toBe(false);
     expect(byKey.get("assignedTo")?.label).toBe("Assignee");
+    expect(byKey.get("status")).toMatchObject({
+      label: "Status",
+      type: "select",
+      values: ["NEW", "ASSIGNED", "RESOLVED"],
+    });
+    expect(byKey.get("severity")).toMatchObject({
+      type: "select",
+      values: ["blocker", "normal"],
+    });
+    expect(byKey.get("platform")).toMatchObject({
+      type: "select",
+      values: ["All", "x86_64"],
+    });
+    expect(byKey.get("priority")).toMatchObject({
+      type: "select",
+      values: ["P1", "P2"],
+    });
     expect(byKey.get("whiteboard")).toMatchObject({
       label: "Whiteboard",
       type: "text",
@@ -208,6 +274,9 @@ describe("detail fields", () => {
     });
     expect(byKey.has("cf_browser_only")).toBe(true);
     expect(byKey.has("cf_mobile_only")).toBe(false);
-    expect(byKey.get("component")?.values).toEqual(["UI", "Networking"]);
+    expect(byKey.get("component")).toMatchObject({
+      type: "select",
+      values: ["UI", "Networking"],
+    });
   });
 });

@@ -1,5 +1,10 @@
 import { isExtraDetailField } from "./detail-fields.js";
-import type { Bug, BugUpdate, DetailFieldType } from "./types.js";
+import type {
+  Bug,
+  BugUpdate,
+  DetailFieldOption,
+  DetailFieldType,
+} from "./types.js";
 
 export interface BugDraft {
   summary: string;
@@ -70,6 +75,45 @@ export function parseKeywords(value: string): string[] {
     .split(",")
     .map((keyword) => keyword.trim())
     .filter((keyword) => keyword.length > 0);
+}
+
+const FALLBACK_SELECT_VALUES: Record<string, readonly string[]> = {
+  status: STATUS_SUGGESTIONS,
+  priority: PRIORITY_SUGGESTIONS,
+  severity: SEVERITY_SUGGESTIONS,
+  resolution: RESOLUTION_SUGGESTIONS,
+};
+
+/**
+ * Resolve the editor type and legal values for a Detail field.
+ * Prefers Bugzilla `/rest/field/bug` metadata; falls back to built-in
+ * select lists for common standard fields when the API omits values.
+ */
+export function fieldEditorMeta(
+  fieldKey: string,
+  fieldOption?: DetailFieldOption,
+): { type?: DetailFieldType; values?: string[] } {
+  const apiValues = fieldOption?.values?.filter(Boolean) ?? [];
+  const fallback = FALLBACK_SELECT_VALUES[fieldKey];
+  const values =
+    apiValues.length > 0
+      ? apiValues
+      : fallback
+        ? [...fallback]
+        : undefined;
+
+  const apiType = fieldOption?.type;
+  const type =
+    apiType && apiType !== "unknown"
+      ? apiType
+      : values && values.length > 0
+        ? "select"
+        : undefined;
+
+  return {
+    ...(type ? { type } : {}),
+    ...(values && values.length > 0 ? { values } : {}),
+  };
 }
 
 export function draftFromBug(
