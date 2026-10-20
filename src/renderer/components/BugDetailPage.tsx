@@ -48,7 +48,7 @@ interface BugDetailPageProps {
   error: string;
   detailFields?: string[];
   onBack: () => void;
-  onOpenAttachment: (id: number) => void;
+  onOpenAttachment: (id: number) => Promise<void>;
   onUpdateBug: (id: number, update: BugUpdate) => Promise<void>;
   onAddComment: (id: number, comment: BugCommentDraft) => Promise<void>;
   onAddAttachment: (id: number, attachment: BugAttachmentDraft) => Promise<void>;
@@ -387,7 +387,18 @@ export function BugDetailPage({
                     type="button"
                     className="attachment"
                     key={attachment.id}
-                    onClick={() => onOpenAttachment(attachment.id)}
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          await onOpenAttachment(attachment.id);
+                        } catch (caught) {
+                          setFeedback({
+                            tone: "error",
+                            text: errorMessage(caught),
+                          });
+                        }
+                      })();
+                    }}
                   >
                     <span className="file-icon">
                       <File size={20} />

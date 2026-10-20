@@ -446,3 +446,39 @@ export async function addAttachment(
   await request(`bug/${id}/attachment`, { method: "POST", body });
   return refreshBug(id, "Attachment uploaded");
 }
+
+export interface AttachmentFile {
+  fileName: string;
+  contentType: string;
+  data: Buffer;
+}
+
+function sanitizeFileName(value: string, fallbackId: number): string {
+  const cleaned = value
+    .trim()
+    .replace(/^.*[/\\]/, "")
+    .replace(/[\u0000-\u001f<>:"|?*]/g, "_")
+    .replace(/\.+$/g, "");
+  return cleaned || `attachment-${fallbackId}`;
+}
+
+export async function getAttachmentFile(id: number): Promise<AttachmentFile> {
+  if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid attachment.");
+
+  const payload = await request(`bug/attachment/${id}`);
+  const attachments = payload.attachments as JsonRecord | undefined;
+  const attachment = attachments?.[String(id)] as JsonRecord | undefined;
+  if (!attachment) throw new Error(`Attachment ${id} was not found.`);
+
+  const data = stripBase64(text(attachment.data));
+  if (!data) throw new Error("Attachment has no data.");
+  if (data.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
+    throw new Error("Attachment data from Bugzilla was invalid.");
+  }
+
+  return {
+    fileName: sanitizeFileName(text(attachment.file_name), id),
+    contentType: text(attachment.content_type) || "application/octet-stream",
+    data: Buffer.from(data, "base64"),
+  };
+}

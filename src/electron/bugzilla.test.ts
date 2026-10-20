@@ -25,6 +25,7 @@ vi.mock("./settings.js", () => ({
 import {
   addAttachment,
   addComment,
+  getAttachmentFile,
   getBug,
   getProductDetailFields,
   searchBugs,
@@ -519,5 +520,71 @@ describe("Bugzilla API client", () => {
       }),
     ).rejects.toThrow("Attachments must be 10 MB or smaller.");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("downloads attachment bytes through the REST API", async () => {
+    fetchMock.mockResolvedValue(
+      response({
+        attachments: {
+          "7": {
+            id: 7,
+            file_name: "notes.txt",
+            content_type: "text/plain",
+            data: "aGVsbG8=",
+          },
+        },
+      }),
+    );
+
+    const file = await getAttachmentFile(7);
+
+    expect(file).toEqual({
+      fileName: "notes.txt",
+      contentType: "text/plain",
+      data: Buffer.from("hello"),
+    });
+    const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/bug/attachment/7");
+    expect(options.method ?? "GET").toBe("GET");
+    expect(
+      (options.headers as Record<string, string>)["X-BUGZILLA-API-KEY"],
+    ).toBe("secret");
+  });
+
+  it("sanitizes attachment file names and rejects missing data", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({
+        attachments: {
+          "8": {
+            id: 8,
+            file_name: "../../evil:name?.txt",
+            content_type: "text/plain",
+            data: "YQ==",
+          },
+        },
+      }),
+    );
+
+    await expect(getAttachmentFile(8)).resolves.toMatchObject({
+      fileName: "evil_name_.txt",
+      data: Buffer.from("a"),
+    });
+
+    fetchMock.mockResolvedValueOnce(
+      response({
+        attachments: {
+          "9": {
+            id: 9,
+            file_name: "empty.bin",
+            content_type: "application/octet-stream",
+            data: "",
+          },
+        },
+      }),
+    );
+    await expect(getAttachmentFile(9)).rejects.toThrow("Attachment has no data.");
+
+    await expect(getAttachmentFile(0)).rejects.toThrow("Invalid attachment.");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
