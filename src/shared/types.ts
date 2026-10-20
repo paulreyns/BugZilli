@@ -1,3 +1,16 @@
+export interface FilterRule {
+  /** App field key (e.g. status, assignedTo, cf_team). */
+  field: string;
+  value: string;
+}
+
+export interface SavedFilter {
+  id: string;
+  /** Display name in the filter dropdown. */
+  name: string;
+  rules: FilterRule[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -8,6 +21,8 @@ export interface Project {
   detailFields?: string[];
   /** Ordered Issues table columns. Defaults to the built-in layout when omitted. */
   listColumns?: string[];
+  /** User-defined list/board filters for this product. */
+  filters?: SavedFilter[];
 }
 
 export interface DetailFieldOption {
@@ -33,6 +48,8 @@ export interface BugSearch {
   projectId: string;
   query?: string;
   limit?: number;
+  /** Field equality filters passed through to Bugzilla search. */
+  filters?: FilterRule[];
 }
 
 export interface Bug {
