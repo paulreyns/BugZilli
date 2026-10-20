@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Filter, Plus } from "lucide-react";
+import { Check, ChevronDown, Filter, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   ALL_FILTER_ID,
@@ -12,6 +12,8 @@ interface FilterSelectProps {
   selectedId: string;
   onSelect: (filterId: string) => void;
   onAddFilter: () => void;
+  onEditFilter: () => void;
+  onDeleteFilter: () => void;
   disabled?: boolean;
 }
 
@@ -20,6 +22,8 @@ export function FilterSelect({
   selectedId,
   onSelect,
   onAddFilter,
+  onEditFilter,
+  onDeleteFilter,
   disabled = false,
 }: FilterSelectProps) {
   const [open, setOpen] = useState(false);
@@ -27,6 +31,7 @@ export function FilterSelect({
   const menuId = useId();
   const activeId = resolveSelectedFilterId(selectedId, filters);
   const activeFilter = filters.find((filter) => filter.id === activeId);
+  const canMutate = activeId !== ALL_FILTER_ID && Boolean(activeFilter);
   const label =
     activeId === ALL_FILTER_ID
       ? "All"
@@ -101,17 +106,55 @@ export function FilterSelect({
             </button>
           ))}
           <div className="filter-select-divider" role="separator" />
-          <button
-            type="button"
-            className="filter-select-option filter-select-add"
-            onClick={() => {
-              setOpen(false);
-              onAddFilter();
-            }}
-          >
-            <Plus size={15} />
-            <span>Add Filter</span>
-          </button>
+          <div className="filter-select-actions">
+            <button
+              type="button"
+              className="filter-select-option filter-select-action"
+              onClick={() => {
+                setOpen(false);
+                onAddFilter();
+              }}
+            >
+              <Plus size={15} />
+              <span>Add</span>
+            </button>
+            <button
+              type="button"
+              className="filter-select-option filter-select-action"
+              disabled={!canMutate}
+              title={
+                canMutate
+                  ? "Edit selected filter"
+                  : "The default All filter cannot be edited"
+              }
+              onClick={() => {
+                if (!canMutate) return;
+                setOpen(false);
+                onEditFilter();
+              }}
+            >
+              <Pencil size={15} />
+              <span>Edit</span>
+            </button>
+            <button
+              type="button"
+              className="filter-select-option filter-select-action filter-select-delete"
+              disabled={!canMutate}
+              title={
+                canMutate
+                  ? "Delete selected filter"
+                  : "The default All filter cannot be deleted"
+              }
+              onClick={() => {
+                if (!canMutate) return;
+                setOpen(false);
+                onDeleteFilter();
+              }}
+            >
+              <Trash2 size={15} />
+              <span>Delete</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

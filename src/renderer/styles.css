@@ -353,10 +353,31 @@ button:disabled {
   color: var(--blue);
 }
 
-.filter-select-add {
-  justify-content: flex-start;
+.filter-select-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.filter-select-action {
+  flex: 1;
+  justify-content: center;
+  gap: 6px;
   color: var(--blue);
   font-weight: 600;
+}
+
+.filter-select-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.filter-select-action:disabled:hover {
+  background: transparent;
+}
+
+.filter-select-delete:not(:disabled) {
+  color: #ae2a19;
 }
 
 .filter-select-divider {
