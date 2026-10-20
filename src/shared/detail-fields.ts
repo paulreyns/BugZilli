@@ -1,5 +1,30 @@
 import type { Bug, BugUpdate } from "./types.js";
 
+/**
+ * Core Bugzilla REST field names always requested/mapped onto first-class
+ * `Bug` properties (rather than `extraFields`).
+ */
+export const baseBugFields = [
+  "id",
+  "summary",
+  "status",
+  "resolution",
+  "product",
+  "component",
+  "priority",
+  "severity",
+  "assigned_to",
+  "assigned_to_detail",
+  "creator",
+  "creation_time",
+  "last_change_time",
+  "keywords",
+  "platform",
+  "version",
+] as const;
+
+const baseBugFieldSet = new Set<string>(baseBugFields);
+
 /** Fields shown in the Bug Details sidebar by default (current layout). */
 export const DEFAULT_DETAIL_FIELDS = [
   "assignedTo",
@@ -299,25 +324,7 @@ export function catalogFromBugRecord(
 
 /** True when the field is stored on `Bug.extraFields` rather than a first-class property. */
 export function isExtraDetailField(key: string): boolean {
-  switch (key) {
-    case "id":
-    case "summary":
-    case "status":
-    case "assignedTo":
-    case "creator":
-    case "priority":
-    case "severity":
-    case "component":
-    case "version":
-    case "platform":
-    case "creationTime":
-    case "lastChangeTime":
-    case "resolution":
-    case "keywords":
-      return false;
-    default:
-      return true;
-  }
+  return !baseBugFieldSet.has(bugzillaNameForKey(key));
 }
 
 export function readBugFieldValue(bug: Bug, key: string): unknown {

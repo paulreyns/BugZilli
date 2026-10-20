@@ -1,4 +1,5 @@
 import {
+  baseBugFields,
   bugzillaNameForKey,
   catalogFromBugRecord,
   keyForBugzillaField,
@@ -32,27 +33,8 @@ interface BugzillaRequest {
   body?: JsonRecord;
 }
 
-const baseBugFields = [
-  "id",
-  "summary",
-  "status",
-  "resolution",
-  "product",
-  "component",
-  "priority",
-  "severity",
-  "assigned_to",
-  "assigned_to_detail",
-  "creator",
-  "creation_time",
-  "last_change_time",
-  "keywords",
-  "platform",
-  "version",
-];
-
 function includeFieldsForProject(project: Project): string {
-  const fields = new Set(baseBugFields);
+  const fields = new Set<string>(baseBugFields);
   for (const key of resolveListColumns(project.listColumns)) {
     fields.add(bugzillaNameForKey(key));
   }

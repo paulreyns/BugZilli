@@ -53,6 +53,7 @@ describe("detail fields", () => {
     expect(isExtraDetailField("status")).toBe(false);
     expect(isExtraDetailField("assignedTo")).toBe(false);
     expect(isExtraDetailField("keywords")).toBe(false);
+    expect(isExtraDetailField("product")).toBe(false);
     expect(isExtraDetailField("whiteboard")).toBe(true);
     expect(isExtraDetailField("cf_team")).toBe(true);
   });
