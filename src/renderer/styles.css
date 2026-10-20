@@ -1143,6 +1143,44 @@ button:disabled {
   font-weight: 500;
 }
 
+select.detail-control {
+  cursor: pointer;
+}
+
+.detail-control-textarea {
+  height: auto;
+  min-height: 72px;
+  padding: 8px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.detail-multiselect {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow: auto;
+  padding: 6px 8px;
+  border: 1px solid #b6bdc8;
+  border-radius: 4px;
+  background: white;
+}
+
+.detail-multiselect-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #172b4d;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.detail-multiselect-option input {
+  margin-top: 1px;
+}
+
 .summary-input:focus,
 .detail-control:focus,
 .composer input:not([type="checkbox"]):focus,

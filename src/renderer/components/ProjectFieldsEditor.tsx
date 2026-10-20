@@ -48,7 +48,7 @@ export function ProjectFieldsEditor({
       const options = await window.bugzilli.getProductDetailFields(product.trim());
       const catalog = augmentCatalog ? augmentCatalog(options) : options;
       setCatalog(catalog);
-      setMessage(`Loaded ${catalog.length} fields from a sample bug.`);
+      setMessage(`Loaded ${catalog.length} fields from Bugzilla.`);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {

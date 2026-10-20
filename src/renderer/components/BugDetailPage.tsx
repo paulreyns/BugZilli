@@ -24,6 +24,7 @@ import {
   draftFromBug,
   isClosedStatus,
   isOpenStatus,
+  parseKeywords,
   validateBugDraft,
   type BugDraft,
 } from "../../shared/bug-update";
@@ -40,6 +41,8 @@ import {
   type BugCommentDraft,
   type BugDetail,
   type BugUpdate,
+  type DetailFieldOption,
+  type DetailFieldType,
 } from "../../shared/types";
 import { errorMessage } from "../errors";
 
@@ -94,6 +97,7 @@ export function BugDetailPage({
     tone: "error" | "success";
     text: string;
   } | null>(null);
+  const [fieldCatalog, setFieldCatalog] = useState<DetailFieldOption[]>([]);
   const pendingRef = useRef(false);
 
   useEffect(() => {
@@ -103,6 +107,26 @@ export function BugDetailPage({
     setPending(null);
     pendingRef.current = false;
   }, [bug?.id]);
+
+  useEffect(() => {
+    const product = bug?.product?.trim();
+    if (!product) {
+      setFieldCatalog([]);
+      return;
+    }
+    let cancelled = false;
+    void window.bugzilli
+      .getProductDetailFields(product)
+      .then((options) => {
+        if (!cancelled) setFieldCatalog(options);
+      })
+      .catch(() => {
+        if (!cancelled) setFieldCatalog([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bug?.product]);
 
   useEffect(() => {
     if (!editing) return;
@@ -115,6 +139,12 @@ export function BugDetailPage({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [editing]);
+
+  const fieldByKey = new Map(fieldCatalog.map((option) => [option.key, option]));
+  const fieldTypes: Record<string, DetailFieldType> = {};
+  for (const option of fieldCatalog) {
+    if (option.type) fieldTypes[option.key] = option.type;
+  }
 
   async function run(action: PendingAction, work: () => Promise<string>) {
     if (pendingRef.current) {
@@ -161,12 +191,12 @@ export function BugDetailPage({
 
   async function save() {
     if (!bug || !draft || pendingRef.current) return;
-    const problem = validateBugDraft(bug, draft);
+    const problem = validateBugDraft(bug, draft, fieldTypes);
     if (problem) {
       setFeedback({ tone: "error", text: problem });
       return;
     }
-    const update = buildBugUpdate(bug, draft);
+    const update = buildBugUpdate(bug, draft, fieldTypes);
     try {
       await run("save", async () => {
         await onUpdateBug(bug.id, update);
@@ -211,7 +241,9 @@ export function BugDetailPage({
   }
 
   const form = editing && draft ? draft : null;
-  const dirty = form ? Object.keys(buildBugUpdate(bug, form)).length > 0 : false;
+  const dirty = form
+    ? Object.keys(buildBugUpdate(bug, form, fieldTypes)).length > 0
+    : false;
   const shownStatus = form ? form.status : bug.status;
   const fields = resolveDetailFields(detailFields);
   const fieldKeys = form && !fields.includes("status") ? ["status", ...fields] : fields;
@@ -436,6 +468,7 @@ export function BugDetailPage({
               fieldKey={key}
               bug={bug}
               form={form}
+              fieldOption={fieldByKey.get(key)}
               pending={pending !== null}
               onDraftChange={updateDraft}
             />
@@ -474,17 +507,20 @@ function DetailField({
   fieldKey,
   bug,
   form,
+  fieldOption,
   pending,
   onDraftChange,
 }: {
   fieldKey: string;
   bug: BugDetail;
   form: BugDraft | null;
+  fieldOption?: DetailFieldOption | undefined;
   pending: boolean;
   onDraftChange: (values: Partial<BugDraft>) => void;
 }) {
   const definition = detailFieldDefinition(fieldKey);
   const icon = fieldIcon(fieldKey);
+  const label = fieldOption?.label || definition.label;
 
   if (form && definition.editable) {
     switch (definition.editable) {
@@ -492,7 +528,7 @@ function DetailField({
         return (
           <TextControl
             id="bug-status"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.status}
             suggestions={STATUS_SUGGESTIONS}
@@ -504,7 +540,7 @@ function DetailField({
         return (
           <TextControl
             id="bug-assignee"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.assignedTo}
             disabled={pending}
@@ -515,7 +551,7 @@ function DetailField({
         return (
           <TextControl
             id="bug-priority"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.priority}
             suggestions={PRIORITY_SUGGESTIONS}
@@ -527,7 +563,7 @@ function DetailField({
         return (
           <TextControl
             id="bug-severity"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.severity}
             suggestions={SEVERITY_SUGGESTIONS}
@@ -539,9 +575,10 @@ function DetailField({
         return (
           <TextControl
             id="bug-component"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.component}
+            suggestions={fieldOption?.values}
             disabled={pending}
             onChange={(component) => onDraftChange({ component })}
           />
@@ -550,9 +587,10 @@ function DetailField({
         return (
           <TextControl
             id="bug-version"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.version}
+            suggestions={fieldOption?.values}
             disabled={pending}
             onChange={(version) => onDraftChange({ version })}
           />
@@ -561,9 +599,10 @@ function DetailField({
         return (
           <TextControl
             id="bug-platform"
-            label={definition.label}
+            label={label}
             icon={icon}
             value={form.platform}
+            suggestions={fieldOption?.values}
             disabled={pending}
             onChange={(platform) => onDraftChange({ platform })}
           />
@@ -573,7 +612,7 @@ function DetailField({
           <>
             <TextControl
               id="bug-resolution"
-              label={definition.label}
+              label={label}
               icon={icon}
               value={form.resolution}
               suggestions={RESOLUTION_SUGGESTIONS}
@@ -594,7 +633,7 @@ function DetailField({
           <>
             <TextControl
               id="bug-keywords"
-              label={definition.label}
+              label={label}
               icon={icon}
               value={form.keywords}
               disabled={pending}
@@ -610,13 +649,17 @@ function DetailField({
 
   if (form && isExtraDetailField(fieldKey)) {
     return (
-      <TextControl
+      <ExtraFieldControl
         id={`bug-field-${fieldKey}`}
-        label={definition.label}
+        label={label}
         icon={icon}
         value={form.extraFields[fieldKey] ?? ""}
+        type={fieldOption?.type}
+        values={fieldOption?.values}
         disabled={pending}
-        onChange={(value) => onDraftChange({ extraFields: { [fieldKey]: value } })}
+        onChange={(value) =>
+          onDraftChange({ extraFields: { [fieldKey]: value } })
+        }
       />
     );
   }
@@ -624,7 +667,7 @@ function DetailField({
   if (definition.format === "keywords") {
     if (bug.keywords.length === 0) return null;
     return (
-      <div className="keyword-list" aria-label={definition.label}>
+      <div className="keyword-list" aria-label={label}>
         {bug.keywords.map((keyword) => (
           <span key={keyword}>{keyword}</span>
         ))}
@@ -633,13 +676,13 @@ function DetailField({
   }
 
   if (definition.format === "resolution") {
-    const label = resolutionLabel(bug.resolution);
-    if (!label && !form) {
+    const resolution = resolutionLabel(bug.resolution);
+    if (!resolution && !form) {
       return null;
     }
     return (
-      <DetailRow label={definition.label} icon={icon}>
-        <strong>{label || "—"}</strong>
+      <DetailRow label={label} icon={icon}>
+        <strong>{resolution || "—"}</strong>
       </DetailRow>
     );
   }
@@ -647,7 +690,7 @@ function DetailField({
   if (definition.format === "date") {
     const raw = readBugFieldValue(bug, fieldKey);
     return (
-      <DetailRow label={definition.label} icon={icon}>
+      <DetailRow label={label} icon={icon}>
         <strong>{displayDate(typeof raw === "string" ? raw : "")}</strong>
       </DetailRow>
     );
@@ -655,7 +698,7 @@ function DetailField({
 
   if (fieldKey === "assignedTo") {
     return (
-      <DetailRow label={definition.label} icon={icon}>
+      <DetailRow label={label} icon={icon}>
         <strong>{bug.assignedToName || bug.assignedTo || "Unassigned"}</strong>
       </DetailRow>
     );
@@ -663,7 +706,7 @@ function DetailField({
 
   if (fieldKey === "creator") {
     return (
-      <DetailRow label={definition.label} icon={icon}>
+      <DetailRow label={label} icon={icon}>
         <strong>{bug.creator || "Unknown"}</strong>
       </DetailRow>
     );
@@ -678,9 +721,203 @@ function DetailField({
         : formatExtraFieldValue(raw);
 
   return (
-    <DetailRow label={definition.label} icon={icon}>
+    <DetailRow label={label} icon={icon}>
       <strong>{display || "—"}</strong>
     </DetailRow>
+  );
+}
+
+function toDateInputValue(value: string): string {
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? "";
+}
+
+function toDateTimeLocalValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const normalized = trimmed.includes("T")
+    ? trimmed
+    : trimmed.replace(" ", "T");
+  const match = normalized.match(
+    /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2})?/,
+  );
+  if (!match) return "";
+  return `${match[1]}T${match[2]}`;
+}
+
+function fromDateTimeLocalValue(value: string): string {
+  if (!value) return "";
+  return value.length === 16 ? `${value}:00` : value;
+}
+
+function ExtraFieldControl({
+  id,
+  label,
+  icon,
+  value,
+  type,
+  values,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  value: string;
+  type?: DetailFieldType | undefined;
+  values?: string[] | undefined;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const options = values ?? [];
+
+  if (type === "select" && options.length > 0) {
+    const selectOptions =
+      value && !options.includes(value) ? [value, ...options] : options;
+    return (
+      <div className="detail-row">
+        <label className="detail-label" htmlFor={id}>
+          {icon} {label}
+        </label>
+        <select
+          id={id}
+          className="detail-control"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="">—</option>
+          {selectOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  if (type === "multiselect" && options.length > 0) {
+    const selected = new Set(parseKeywords(value));
+    return (
+      <div className="detail-row">
+        <span className="detail-label" id={`${id}-label`}>
+          {icon} {label}
+        </span>
+        <div
+          className="detail-multiselect"
+          role="group"
+          aria-labelledby={`${id}-label`}
+        >
+          {options.map((option) => {
+            const checked = selected.has(option);
+            return (
+              <label key={option} className="detail-multiselect-option">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => {
+                    const next = new Set(selected);
+                    if (checked) next.delete(option);
+                    else next.add(option);
+                    onChange([...next].join(", "));
+                  }}
+                />
+                <span>{option}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "textarea") {
+    return (
+      <div className="detail-row">
+        <label className="detail-label" htmlFor={id}>
+          {icon} {label}
+        </label>
+        <textarea
+          id={id}
+          className="detail-control detail-control-textarea"
+          value={value}
+          disabled={disabled}
+          rows={4}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    );
+  }
+
+  if (type === "date") {
+    return (
+      <div className="detail-row">
+        <label className="detail-label" htmlFor={id}>
+          {icon} {label}
+        </label>
+        <input
+          id={id}
+          className="detail-control"
+          type="date"
+          value={toDateInputValue(value)}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    );
+  }
+
+  if (type === "datetime") {
+    return (
+      <div className="detail-row">
+        <label className="detail-label" htmlFor={id}>
+          {icon} {label}
+        </label>
+        <input
+          id={id}
+          className="detail-control"
+          type="datetime-local"
+          value={toDateTimeLocalValue(value)}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange(fromDateTimeLocalValue(event.target.value))
+          }
+        />
+      </div>
+    );
+  }
+
+  if (type === "integer") {
+    return (
+      <div className="detail-row">
+        <label className="detail-label" htmlFor={id}>
+          {icon} {label}
+        </label>
+        <input
+          id={id}
+          className="detail-control"
+          type="number"
+          inputMode="numeric"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <TextControl
+      id={id}
+      label={label}
+      icon={icon}
+      value={value}
+      suggestions={options.length > 0 ? options : undefined}
+      disabled={disabled}
+      onChange={onChange}
+    />
   );
 }
 
@@ -716,7 +953,7 @@ function TextControl({
   label: string;
   icon: ReactNode;
   value: string;
-  suggestions?: readonly string[];
+  suggestions?: readonly string[] | undefined;
   disabled: boolean;
   onChange: (value: string) => void;
 }) {

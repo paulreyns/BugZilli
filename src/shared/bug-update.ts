@@ -1,5 +1,5 @@
 import { isExtraDetailField } from "./detail-fields.js";
-import type { Bug, BugUpdate } from "./types.js";
+import type { Bug, BugUpdate, DetailFieldType } from "./types.js";
 
 export interface BugDraft {
   summary: string;
@@ -103,7 +103,25 @@ function sameKeywords(left: string[], right: string[]): boolean {
   );
 }
 
-export function buildBugUpdate(bug: Bug, draft: BugDraft): BugUpdate {
+function sameStringSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const counts = new Map<string, number>();
+  for (const value of left) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  for (const value of right) {
+    const next = (counts.get(value) ?? 0) - 1;
+    if (next < 0) return false;
+    counts.set(value, next);
+  }
+  return true;
+}
+
+export function buildBugUpdate(
+  bug: Bug,
+  draft: BugDraft,
+  fieldTypes: Record<string, DetailFieldType> = {},
+): BugUpdate {
   const update: BugUpdate = {};
   const summary = draft.summary.trim();
   if (summary !== bug.summary) update.summary = summary;
@@ -139,15 +157,23 @@ export function buildBugUpdate(bug: Bug, draft: BugDraft): BugUpdate {
     update.resolution = resolution;
   }
 
-  const extraFields: Record<string, string> = {};
+  const extraFields: Record<string, string | string[]> = {};
   const draftKeys = new Set([
     ...Object.keys(draft.extraFields),
     ...Object.keys(bug.extraFields ?? {}),
   ]);
   for (const key of draftKeys) {
     if (!isExtraDetailField(key)) continue;
-    const next = (draft.extraFields[key] ?? "").trim();
-    const current = (bug.extraFields?.[key] ?? "").trim();
+    const nextRaw = draft.extraFields[key] ?? "";
+    const currentRaw = bug.extraFields?.[key] ?? "";
+    if (fieldTypes[key] === "multiselect") {
+      const next = parseKeywords(nextRaw);
+      const current = parseKeywords(currentRaw);
+      if (!sameStringSet(next, current)) extraFields[key] = next;
+      continue;
+    }
+    const next = nextRaw.trim();
+    const current = currentRaw.trim();
     if (next !== current) extraFields[key] = next;
   }
   if (Object.keys(extraFields).length > 0) update.extraFields = extraFields;
@@ -155,7 +181,11 @@ export function buildBugUpdate(bug: Bug, draft: BugDraft): BugUpdate {
   return update;
 }
 
-export function validateBugDraft(bug: Bug, draft: BugDraft): string | null {
+export function validateBugDraft(
+  bug: Bug,
+  draft: BugDraft,
+  fieldTypes: Record<string, DetailFieldType> = {},
+): string | null {
   const summary = draft.summary.trim();
   if (!summary) return "Summary cannot be empty.";
   if (summary.length > 255) return "Summary must be 255 characters or fewer.";
@@ -174,7 +204,7 @@ export function validateBugDraft(bug: Bug, draft: BugDraft): string | null {
   if (isOpenStatus(draft.status) && resolution) {
     return "Clear the resolution before saving an open bug.";
   }
-  if (Object.keys(buildBugUpdate(bug, draft)).length === 0) {
+  if (Object.keys(buildBugUpdate(bug, draft, fieldTypes)).length === 0) {
     return "Change a field before saving.";
   }
   return null;

@@ -1,4 +1,55 @@
-import type { Bug, BugUpdate } from "./types.js";
+import type {
+  Bug,
+  BugUpdate,
+  DetailFieldOption,
+  DetailFieldType,
+} from "./types.js";
+
+/** Bugzilla `GET /rest/field/bug` field type integers. */
+export const BUGZILLA_FIELD_TYPE = {
+  unknown: 0,
+  text: 1,
+  select: 2,
+  multiselect: 3,
+  textarea: 4,
+  datetime: 5,
+  bugid: 6,
+  seealso: 7,
+  keywords: 8,
+  date: 9,
+  integer: 10,
+} as const;
+
+const FIELD_TYPE_BY_NUMBER: Record<number, DetailFieldType> = {
+  [BUGZILLA_FIELD_TYPE.unknown]: "unknown",
+  [BUGZILLA_FIELD_TYPE.text]: "text",
+  [BUGZILLA_FIELD_TYPE.select]: "select",
+  [BUGZILLA_FIELD_TYPE.multiselect]: "multiselect",
+  [BUGZILLA_FIELD_TYPE.textarea]: "textarea",
+  [BUGZILLA_FIELD_TYPE.datetime]: "datetime",
+  [BUGZILLA_FIELD_TYPE.bugid]: "bugid",
+  [BUGZILLA_FIELD_TYPE.seealso]: "seealso",
+  [BUGZILLA_FIELD_TYPE.keywords]: "keywords",
+  [BUGZILLA_FIELD_TYPE.date]: "date",
+  [BUGZILLA_FIELD_TYPE.integer]: "integer",
+};
+
+export function detailFieldTypeFromBugzilla(type: unknown): DetailFieldType {
+  if (typeof type !== "number") return "unknown";
+  return FIELD_TYPE_BY_NUMBER[type] ?? "unknown";
+}
+
+/** Raw field object from `GET /rest/field/bug`. */
+export interface BugzillaFieldApiRecord {
+  name?: unknown;
+  display_name?: unknown;
+  type?: unknown;
+  is_custom?: unknown;
+  visibility_field?: unknown;
+  visibility_values?: unknown;
+  value_field?: unknown;
+  values?: unknown;
+}
 
 /**
  * Core Bugzilla REST field names always requested/mapped onto first-class
@@ -311,15 +362,115 @@ export function catalogFromBugRecord(
     }
   }
 
+  return orderCatalogKeys([...catalog.keys()]).map((key) => catalog.get(key)!).filter(Boolean);
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
+function fieldVisibleForProduct(
+  field: BugzillaFieldApiRecord,
+  product: string,
+): boolean {
+  const visibilityField =
+    typeof field.visibility_field === "string" ? field.visibility_field : "";
+  if (!visibilityField) return true;
+  if (visibilityField !== "product") return true;
+  return stringList(field.visibility_values).includes(product);
+}
+
+function valuesForProduct(
+  field: BugzillaFieldApiRecord,
+  product: string,
+): string[] {
+  if (!Array.isArray(field.values)) return [];
+  const valueField =
+    typeof field.value_field === "string" ? field.value_field : "";
+
+  const entries: { name: string; sortKey: number }[] = [];
+  for (const raw of field.values) {
+    if (!raw || typeof raw !== "object") continue;
+    const value = raw as Record<string, unknown>;
+    const name = typeof value.name === "string" ? value.name : "";
+    if (!name) continue;
+    if (value.is_active === false) continue;
+    if (
+      valueField === "product" &&
+      !stringList(value.visibility_values).includes(product)
+    ) {
+      continue;
+    }
+    const sortKey =
+      typeof value.sort_key === "number"
+        ? value.sort_key
+        : typeof value.sortkey === "number"
+          ? value.sortkey
+          : 0;
+    entries.push({ name, sortKey });
+  }
+
+  entries.sort(
+    (left, right) =>
+      left.sortKey - right.sortKey || left.name.localeCompare(right.name),
+  );
+  return entries.map(({ name }) => name);
+}
+
+function orderCatalogKeys(keys: string[]): string[] {
   const preferred = defaultDetailFields();
   const preferredSet = new Set(preferred);
-  const rest = [...catalog.keys()]
+  const rest = keys
     .filter((key) => !preferredSet.has(key) && key !== "status")
     .sort((a, b) =>
       detailFieldDefinition(a).label.localeCompare(detailFieldDefinition(b).label),
     );
+  const ordered = ["status", ...preferred, ...rest];
+  const keySet = new Set(keys);
+  return ordered.filter((key) => keySet.has(key));
+}
 
-  return ["status", ...preferred, ...rest].map((key) => catalog.get(key)!).filter(Boolean);
+/**
+ * Build the Details / filter field catalog from `GET /rest/field/bug`,
+ * filtered to fields (and legal values) that apply to `product`.
+ */
+export function catalogFromFieldApi(
+  fields: BugzillaFieldApiRecord[],
+  product: string,
+): DetailFieldOption[] {
+  const trimmedProduct = product.trim();
+  const catalog = new Map<string, DetailFieldOption>();
+
+  for (const known of KNOWN_FIELDS) {
+    catalog.set(known.key, { key: known.key, label: known.label });
+  }
+
+  for (const field of fields) {
+    const name = typeof field.name === "string" ? field.name.trim() : "";
+    if (!name || EXCLUDED_BUGZILLA_FIELDS.has(name)) continue;
+    if (!fieldVisibleForProduct(field, trimmedProduct)) continue;
+
+    const key = keyForBugzillaField(name);
+    const known = knownByKey.get(key);
+    const displayName =
+      typeof field.display_name === "string" ? field.display_name.trim() : "";
+    const type = detailFieldTypeFromBugzilla(field.type);
+    const values = valuesForProduct(field, trimmedProduct);
+    const option: DetailFieldOption = {
+      key,
+      label: known?.label || displayName || humanizeFieldKey(key),
+      type,
+      ...(values.length > 0 ? { values } : {}),
+    };
+    catalog.set(key, option);
+  }
+
+  return orderCatalogKeys([...catalog.keys()])
+    .map((key) => catalog.get(key)!)
+    .filter(Boolean);
 }
 
 /** True when the field is stored on `Bug.extraFields` rather than a first-class property. */

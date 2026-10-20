@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   bugzillaChartNameForKey,
   catalogFromBugRecord,
+  catalogFromFieldApi,
   defaultDetailFields,
   detailFieldDefinition,
+  detailFieldTypeFromBugzilla,
   isExtraDetailField,
   resolveDetailFields,
 } from "./detail-fields.js";
@@ -97,5 +99,115 @@ describe("detail fields", () => {
     expect(keys).not.toContain("summary");
     expect(keys).not.toContain("depends_on");
     expect(keys.indexOf("assignedTo")).toBeLessThan(keys.indexOf("whiteboard"));
+  });
+
+  it("maps Bugzilla field type integers", () => {
+    expect(detailFieldTypeFromBugzilla(1)).toBe("text");
+    expect(detailFieldTypeFromBugzilla(2)).toBe("select");
+    expect(detailFieldTypeFromBugzilla(3)).toBe("multiselect");
+    expect(detailFieldTypeFromBugzilla(4)).toBe("textarea");
+    expect(detailFieldTypeFromBugzilla(9)).toBe("date");
+    expect(detailFieldTypeFromBugzilla(10)).toBe("integer");
+    expect(detailFieldTypeFromBugzilla(99)).toBe("unknown");
+  });
+
+  it("builds a catalog from /rest/field/bug with product-filtered values", () => {
+    const catalog = catalogFromFieldApi(
+      [
+        {
+          name: "summary",
+          display_name: "Summary",
+          type: 1,
+        },
+        {
+          name: "assigned_to",
+          display_name: "Assignee",
+          type: 1,
+        },
+        {
+          name: "whiteboard",
+          display_name: "Whiteboard",
+          type: 1,
+        },
+        {
+          name: "cf_blocking",
+          display_name: "Blocking",
+          type: 2,
+          values: [
+            { name: "yes", sort_key: 1 },
+            { name: "no", sort_key: 2 },
+          ],
+        },
+        {
+          name: "cf_browser_only",
+          display_name: "Browser Only",
+          type: 1,
+          visibility_field: "product",
+          visibility_values: ["Browser"],
+        },
+        {
+          name: "cf_mobile_only",
+          display_name: "Mobile Only",
+          type: 1,
+          visibility_field: "product",
+          visibility_values: ["Mobile"],
+        },
+        {
+          name: "component",
+          display_name: "Component",
+          type: 2,
+          value_field: "product",
+          values: [
+            {
+              name: "UI",
+              sort_key: 1,
+              visibility_values: ["Browser"],
+              is_active: true,
+            },
+            {
+              name: "Networking",
+              sort_key: 2,
+              visibility_values: ["Browser"],
+              is_active: true,
+            },
+            {
+              name: "Android",
+              sort_key: 1,
+              visibility_values: ["Mobile"],
+              is_active: true,
+            },
+            {
+              name: "Retired",
+              sort_key: 3,
+              visibility_values: ["Browser"],
+              is_active: false,
+            },
+          ],
+        },
+        {
+          name: "depends_on",
+          display_name: "Depends On",
+          type: 6,
+        },
+      ],
+      "Browser",
+    );
+
+    const byKey = new Map(catalog.map((option) => [option.key, option]));
+    expect(byKey.has("summary")).toBe(false);
+    expect(byKey.has("depends_on")).toBe(false);
+    expect(byKey.get("assignedTo")?.label).toBe("Assignee");
+    expect(byKey.get("whiteboard")).toMatchObject({
+      label: "Whiteboard",
+      type: "text",
+    });
+    expect(byKey.get("cf_blocking")).toMatchObject({
+      label: "Blocking",
+      type: "select",
+      values: ["yes", "no"],
+    });
+    expect(byKey.has("cf_browser_only")).toBe(true);
+    expect(byKey.has("cf_mobile_only")).toBe(false);
+    expect(byKey.get("component")?.values).toEqual(["UI", "Networking"]);
   });
 });
