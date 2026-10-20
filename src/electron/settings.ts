@@ -1,6 +1,7 @@
 import { app, safeStorage } from "electron";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { cleanSavedFilters } from "../shared/list-filters.js";
 import type { AppSettings, Project, SettingsUpdate } from "../shared/types.js";
 
 interface StoredSettings {
@@ -53,6 +54,7 @@ function cleanProjects(projects: Project[]): Project[] {
     }
     const detailFields = cleanFieldKeys(project.detailFields);
     const listColumns = cleanFieldKeys(project.listColumns);
+    const filters = cleanSavedFilters(project.filters);
     return {
       id: project.id,
       name,
@@ -63,6 +65,7 @@ function cleanProjects(projects: Project[]): Project[] {
       ...(project.showClosedBugs ? { showClosedBugs: true } : {}),
       ...(detailFields ? { detailFields } : {}),
       ...(listColumns ? { listColumns } : {}),
+      ...(filters ? { filters } : {}),
     };
   });
 }

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveDetailFields } from "../shared/detail-fields";
+import {
+  parseSelectedFilters,
+  resolveSelectedFilterId,
+  rulesForSelectedFilter,
+  type SelectedFiltersByProduct,
+} from "../shared/list-filters";
 import type {
   AppSettings,
   Bug,
@@ -7,6 +13,7 @@ import type {
   BugCommentDraft,
   BugDetail,
   BugUpdate,
+  SavedFilter,
   SettingsUpdate,
 } from "../shared/types";
 import { BugDetailPage } from "./components/BugDetailPage";
@@ -17,6 +24,7 @@ import { Sidebar, type Page } from "./components/Sidebar";
 import { errorMessage } from "./errors";
 
 const LAST_LOCATION_KEY = "bugzilli.lastLocation";
+const SELECTED_FILTERS_KEY = "bugzilli.selectedFilters";
 
 interface LastLocation {
   projectId?: string;
@@ -57,6 +65,17 @@ function readLastLocation(): LastLocation | undefined {
   return undefined;
 }
 
+function readSelectedFilters(): SelectedFiltersByProduct {
+  try {
+    const saved = localStorage.getItem(SELECTED_FILTERS_KEY);
+    if (!saved) return {};
+    return parseSelectedFilters(JSON.parse(saved));
+  } catch (error) {
+    console.error("Could not read saved filter selection.", error);
+    return {};
+  }
+}
+
 export default function App() {
   const [lastLocation] = useState(readLastLocation);
   const [settings, setSettings] = useState<AppSettings>();
@@ -67,6 +86,7 @@ export default function App() {
   );
   const [bugs, setBugs] = useState<Bug[]>([]);
   const [query, setQuery] = useState("");
+  const [selectedFilters, setSelectedFilters] = useState(readSelectedFilters);
   const [loadingBugs, setLoadingBugs] = useState(false);
   const [bugsError, setBugsError] = useState("");
   const [selectedBug, setSelectedBug] = useState<BugDetail>();
@@ -121,33 +141,74 @@ export default function App() {
     }
   }, [activeProjectId, globalSettings, page, settings]);
 
-  const loadBugs = useCallback(async (projectId: string, searchQuery = "") => {
-    setLoadingBugs(true);
-    setBugsError("");
+  useEffect(() => {
     try {
-      setBugs(
-        await window.bugzilli.searchBugs({
-          projectId,
-          ...(searchQuery.trim() ? { query: searchQuery.trim() } : {}),
-        }),
+      localStorage.setItem(
+        SELECTED_FILTERS_KEY,
+        JSON.stringify(selectedFilters),
       );
     } catch (error) {
-      setBugs([]);
-      setBugsError(errorMessage(error));
-    } finally {
-      setLoadingBugs(false);
+      console.error("Could not save filter selection.", error);
     }
-  }, []);
+  }, [selectedFilters]);
+
+  const loadBugs = useCallback(
+    async (
+      projectId: string,
+      searchQuery = "",
+      filterRules?: { field: string; value: string }[],
+    ) => {
+      setLoadingBugs(true);
+      setBugsError("");
+      try {
+        setBugs(
+          await window.bugzilli.searchBugs({
+            projectId,
+            ...(searchQuery.trim() ? { query: searchQuery.trim() } : {}),
+            ...(filterRules && filterRules.length > 0
+              ? { filters: filterRules }
+              : {}),
+          }),
+        );
+      } catch (error) {
+        setBugs([]);
+        setBugsError(errorMessage(error));
+      } finally {
+        setLoadingBugs(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (
-      activeProjectId &&
-      (page === "list" || page === "board") &&
-      !selectedBug
+      !activeProjectId ||
+      (page !== "list" && page !== "board") ||
+      selectedBug
     ) {
-      void loadBugs(activeProjectId);
+      return;
     }
-  }, [activeProjectId, page, selectedBug, loadBugs]);
+    const project = settings?.projects.find(({ id }) => id === activeProjectId);
+    if (!project) return;
+    const filterId = resolveSelectedFilterId(
+      selectedFilters[project.product],
+      project.filters,
+    );
+    void loadBugs(
+      activeProjectId,
+      query,
+      rulesForSelectedFilter(filterId, project.filters),
+    );
+    // Reload when project, page, or selected filter changes — not on every query keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- query is only applied via Search/Refresh
+  }, [
+    activeProjectId,
+    page,
+    selectedBug,
+    selectedFilters,
+    settings,
+    loadBugs,
+  ]);
 
   function navigate(projectId: string, nextPage: Page) {
     setActiveProjectId(projectId);
@@ -198,6 +259,20 @@ export default function App() {
     setSettings(next);
     if (!next.projects.some(({ id }) => id === activeProjectId)) {
       setActiveProjectId(next.projects[0]?.id);
+    }
+  }
+
+  async function addProjectFilter(projectId: string, filter: SavedFilter) {
+    if (!settings) return;
+    const projects = settings.projects.map((project) =>
+      project.id === projectId
+        ? { ...project, filters: [...(project.filters ?? []), filter] }
+        : project,
+    );
+    await save({ baseUrl: settings.baseUrl, projects });
+    const product = projects.find(({ id }) => id === projectId)?.product;
+    if (product) {
+      setSelectedFilters((current) => ({ ...current, [product]: filter.id }));
     }
   }
 
@@ -252,17 +327,35 @@ export default function App() {
       />
     );
   } else {
+    const filterId = resolveSelectedFilterId(
+      selectedFilters[activeProject.product],
+      activeProject.filters,
+    );
+    const filterRules = rulesForSelectedFilter(
+      filterId,
+      activeProject.filters,
+    );
     content = (
       <BugsPage
         project={activeProject}
         mode={page}
         bugs={bugs}
         query={query}
+        selectedFilterId={filterId}
         loading={loadingBugs}
         error={bugsError}
         onQueryChange={setQuery}
-        onSearch={() => void loadBugs(activeProject.id, query)}
-        onRefresh={() => void loadBugs(activeProject.id, query)}
+        onSearch={() => void loadBugs(activeProject.id, query, filterRules)}
+        onRefresh={() => void loadBugs(activeProject.id, query, filterRules)}
+        onSelectFilter={(nextId) => {
+          setSelectedFilters((current) => ({
+            ...current,
+            [activeProject.product]: nextId,
+          }));
+        }}
+        onAddFilter={(filter) => {
+          void addProjectFilter(activeProject.id, filter);
+        }}
         onSelectBug={(id) => void openBug(id)}
       />
     );

@@ -94,6 +94,22 @@ describe("Bugzilla API client", () => {
     expect(url.searchParams.has("resolution")).toBe(false);
   });
 
+  it("passes selected field filters through to the Bugzilla search", async () => {
+    fetchMock.mockResolvedValue(response({ bugs: [] }));
+
+    await searchBugs({
+      projectId: "browser",
+      filters: [
+        { field: "status", value: "NEW" },
+        { field: "assignedTo", value: "dev@example.com" },
+      ],
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.searchParams.get("status")).toBe("NEW");
+    expect(url.searchParams.get("assigned_to")).toBe("dev@example.com");
+  });
+
   it("requests configured list column fields when searching", async () => {
     fetchMock.mockResolvedValue(
       response({

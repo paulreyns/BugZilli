@@ -1,19 +1,25 @@
 import { AlertCircle, RefreshCw, Search } from "lucide-react";
-import type { Bug, Project } from "../../shared/types";
+import { useState } from "react";
+import type { Bug, Project, SavedFilter } from "../../shared/types";
 import type { Page } from "./Sidebar";
+import { AddFilterDialog } from "./AddFilterDialog";
 import { BugBoard } from "./BugBoard";
 import { BugList } from "./BugList";
+import { FilterSelect } from "./FilterSelect";
 
 interface BugsPageProps {
   project: Project;
   mode: Extract<Page, "list" | "board">;
   bugs: Bug[];
   query: string;
+  selectedFilterId: string;
   loading: boolean;
   error: string;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
   onRefresh: () => void;
+  onSelectFilter: (filterId: string) => void;
+  onAddFilter: (filter: SavedFilter) => void;
   onSelectBug: (id: number) => void;
 }
 
@@ -23,13 +29,17 @@ export function BugsPage(props: BugsPageProps) {
     mode,
     bugs,
     query,
+    selectedFilterId,
     loading,
     error,
     onQueryChange,
     onSearch,
     onRefresh,
+    onSelectFilter,
+    onAddFilter,
     onSelectBug,
   } = props;
+  const [addFilterOpen, setAddFilterOpen] = useState(false);
 
   return (
     <main className="page bugs-page">
@@ -52,26 +62,35 @@ export function BugsPage(props: BugsPageProps) {
         </button>
       </header>
 
-      <form
-        className="search-bar"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSearch();
-        }}
-      >
-        <Search size={17} />
-        <input
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search issues by ID, summary, or keywords"
-          aria-label="Search issues"
+      <div className="bugs-toolbar">
+        <FilterSelect
+          filters={project.filters ?? []}
+          selectedId={selectedFilterId}
+          onSelect={onSelectFilter}
+          onAddFilter={() => setAddFilterOpen(true)}
+          disabled={loading}
         />
-        {query && (
-          <button className="search-submit" type="submit">
-            Search
-          </button>
-        )}
-      </form>
+        <form
+          className="search-bar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSearch();
+          }}
+        >
+          <Search size={17} />
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search issues by ID, summary, or keywords"
+            aria-label="Search issues"
+          />
+          {query && (
+            <button className="search-submit" type="submit">
+              Search
+            </button>
+          )}
+        </form>
+      </div>
 
       {error && (
         <div className="error-banner">
@@ -91,6 +110,17 @@ export function BugsPage(props: BugsPageProps) {
         />
       ) : (
         <BugBoard bugs={bugs} onSelect={onSelectBug} />
+      )}
+
+      {addFilterOpen && (
+        <AddFilterDialog
+          product={project.product}
+          onClose={() => setAddFilterOpen(false)}
+          onSave={(filter) => {
+            setAddFilterOpen(false);
+            onAddFilter(filter);
+          }}
+        />
       )}
     </main>
   );
