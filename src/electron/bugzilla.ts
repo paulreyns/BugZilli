@@ -6,6 +6,7 @@ import {
 import {
   appendFilterParams,
   cleanFilterRules,
+  isOpenResolutionRule,
 } from "../shared/list-filters.js";
 import { resolveListColumns } from "../shared/list-columns.js";
 import {
@@ -181,13 +182,12 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
   if (!project) throw new Error("The selected project no longer exists.");
 
   const filters = cleanFilterRules(search.filters);
-  const resolutionFilter = filters.find(
+  const resolutionFilters = filters.filter(
     ({ field }) => bugzillaNameForKey(field) === "resolution",
   );
   if (
     !project.showClosedBugs &&
-    resolutionFilter &&
-    resolutionFilter.value !== "---"
+    resolutionFilters.some((rule) => !isOpenResolutionRule(rule))
   ) {
     return [];
   }

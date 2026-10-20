@@ -5,6 +5,8 @@ import {
   cleanFilterRules,
   cleanSavedFilters,
   filterDisplayName,
+  isOpenResolutionRule,
+  normalizeFilterOperator,
   parseSelectedFilters,
   resolveSelectedFilterId,
   rulesForSelectedFilter,
@@ -12,18 +14,25 @@ import {
 } from "./list-filters.js";
 
 describe("list-filters", () => {
-  it("cleans filter rules and drops empty or duplicate fields", () => {
+  it("cleans filter rules and drops empty values for value-based operators", () => {
     expect(
       cleanFilterRules([
         { field: " status ", value: " NEW " },
-        { field: "status", value: "ASSIGNED" },
+        { field: "status", operator: "notequals", value: "ASSIGNED" },
         { field: "priority", value: "" },
         { field: "", value: "P1" },
         { field: "priority", value: "P1" },
+        { field: "summary", operator: "isempty", value: "" },
+        { field: "whiteboard", operator: "isnotempty", value: "ignored" },
+        { field: "bogus", operator: "nope" as never, value: "x" },
       ]),
     ).toEqual([
-      { field: "status", value: "NEW" },
-      { field: "priority", value: "P1" },
+      { field: "status", operator: "equals", value: "NEW" },
+      { field: "status", operator: "notequals", value: "ASSIGNED" },
+      { field: "priority", operator: "equals", value: "P1" },
+      { field: "summary", operator: "isempty", value: "" },
+      { field: "whiteboard", operator: "isnotempty", value: "" },
+      { field: "bogus", operator: "equals", value: "x" },
     ]);
   });
 
@@ -46,19 +55,22 @@ describe("list-filters", () => {
     ).toEqual([
       {
         id: "open",
-        name: "Status = NEW",
-        rules: [{ field: "status", value: "NEW" }],
+        name: "Status equals NEW",
+        rules: [{ field: "status", operator: "equals", value: "NEW" }],
       },
     ]);
   });
 
-  it("summarizes and displays filter names", () => {
+  it("summarizes and displays filter names with operators", () => {
     expect(
       summarizeRules([
         { field: "status", value: "NEW" },
-        { field: "priority", value: "P1" },
+        { field: "priority", operator: "greaterthan", value: "P3" },
+        { field: "summary", operator: "isempty", value: "" },
       ]),
-    ).toBe("Status = NEW · Priority = P1");
+    ).toBe(
+      "Status equals NEW · Priority is greater than P3 · Summary is empty",
+    );
     expect(
       filterDisplayName({
         id: "1",
@@ -70,9 +82,9 @@ describe("list-filters", () => {
       filterDisplayName({
         id: "1",
         name: "  ",
-        rules: [{ field: "status", value: "NEW" }],
+        rules: [{ field: "status", operator: "anywords", value: "NEW FIXED" }],
       }),
-    ).toBe("Status = NEW");
+    ).toBe("Status contains any of the words NEW FIXED");
   });
 
   it("parses selected filters and resolves unknown ids to All", () => {
@@ -94,13 +106,48 @@ describe("list-filters", () => {
     expect(rulesForSelectedFilter(ALL_FILTER_ID, [])).toEqual([]);
   });
 
-  it("appends Bugzilla field names for filter rules", () => {
+  it("appends Bugzilla advanced search fN/oN/vN params for filter rules", () => {
     const params = new URLSearchParams();
     appendFilterParams(params, [
       { field: "assignedTo", value: "dev@example.com" },
-      { field: "status", value: "NEW" },
+      { field: "status", operator: "notequals", value: "RESOLVED" },
+      { field: "summary", operator: "anywords", value: "crash hang" },
+      { field: "whiteboard", operator: "isempty", value: "" },
     ]);
-    expect(params.getAll("assigned_to")).toEqual(["dev@example.com"]);
-    expect(params.getAll("status")).toEqual(["NEW"]);
+    expect(params.get("f1")).toBe("assigned_to");
+    expect(params.get("o1")).toBe("equals");
+    expect(params.get("v1")).toBe("dev@example.com");
+    expect(params.get("f2")).toBe("bug_status");
+    expect(params.get("o2")).toBe("notequals");
+    expect(params.get("v2")).toBe("RESOLVED");
+    expect(params.get("f3")).toBe("short_desc");
+    expect(params.get("o3")).toBe("anywords");
+    expect(params.get("v3")).toBe("crash hang");
+    expect(params.get("f4")).toBe("status_whiteboard");
+    expect(params.get("o4")).toBe("isempty");
+    expect(params.has("v4")).toBe(false);
+  });
+
+  it("normalizes operators and detects open-only resolution rules", () => {
+    expect(normalizeFilterOperator(undefined)).toBe("equals");
+    expect(normalizeFilterOperator("allwords")).toBe("allwords");
+    expect(normalizeFilterOperator("nope")).toBe("equals");
+    expect(
+      isOpenResolutionRule({
+        field: "resolution",
+        operator: "equals",
+        value: "---",
+      }),
+    ).toBe(true);
+    expect(
+      isOpenResolutionRule({
+        field: "resolution",
+        operator: "notequals",
+        value: "---",
+      }),
+    ).toBe(false);
+    expect(
+      isOpenResolutionRule({ field: "status", value: "NEW" }),
+    ).toBe(false);
   });
 });

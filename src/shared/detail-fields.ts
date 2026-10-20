@@ -214,6 +214,28 @@ export function bugzillaNameForKey(key: string): string {
   return detailFieldDefinition(key).bugzilla ?? key;
 }
 
+/**
+ * Bugzilla Custom Search / boolean-chart field names (`fN`) that differ from
+ * REST `include_fields` / simple search parameter names.
+ */
+const CHART_FIELD_BY_BUGZILLA: Record<string, string> = {
+  status: "bug_status",
+  summary: "short_desc",
+  creator: "reporter",
+  creation_time: "creation_ts",
+  last_change_time: "delta_ts",
+  severity: "bug_severity",
+  platform: "rep_platform",
+  url: "bug_file_loc",
+  whiteboard: "status_whiteboard",
+};
+
+/** Field name to use in Bugzilla advanced search `fN` parameters. */
+export function bugzillaChartNameForKey(key: string): string {
+  const bugzilla = bugzillaNameForKey(key);
+  return CHART_FIELD_BY_BUGZILLA[bugzilla] ?? bugzilla;
+}
+
 export function keyForBugzillaField(bugzillaName: string): string {
   return knownByBugzilla.get(bugzillaName)?.key ?? bugzillaName;
 }

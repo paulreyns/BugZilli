@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bugzillaChartNameForKey,
   catalogFromBugRecord,
   defaultDetailFields,
   detailFieldDefinition,
@@ -45,6 +46,14 @@ describe("detail fields", () => {
     expect(detailFieldDefinition("cf_crash_signature").label).toBe(
       "Crash Signature",
     );
+  });
+
+  it("maps REST field names to Custom Search chart names", () => {
+    expect(bugzillaChartNameForKey("status")).toBe("bug_status");
+    expect(bugzillaChartNameForKey("summary")).toBe("short_desc");
+    expect(bugzillaChartNameForKey("assignedTo")).toBe("assigned_to");
+    expect(bugzillaChartNameForKey("severity")).toBe("bug_severity");
+    expect(bugzillaChartNameForKey("cf_team")).toBe("cf_team");
   });
 
   it("builds a catalog from a sample Bugzilla bug payload", () => {
