@@ -21,6 +21,8 @@ export interface Project {
   detailFields?: string[];
   /** Ordered Issues table columns. Defaults to the built-in layout when omitted. */
   listColumns?: string[];
+  /** Ordered Board status columns. Defaults to the standard Bugzilla workflow. */
+  boardStatuses?: string[];
   /** User-defined list/board filters for this product. */
   filters?: SavedFilter[];
 }

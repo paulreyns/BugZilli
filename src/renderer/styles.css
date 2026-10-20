@@ -1015,6 +1015,18 @@ button:disabled {
   gap: 4px;
 }
 
+.board-statuses-layout {
+  grid-template-columns: 1fr;
+}
+
+.board-status-hidden {
+  opacity: 0.55;
+}
+
+.board-status-hidden > span:first-child small {
+  color: var(--muted);
+}
+
 .detail-fields-hint {
   margin: 10px 0 0;
   color: #8993a4;

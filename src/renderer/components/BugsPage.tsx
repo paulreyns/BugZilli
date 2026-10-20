@@ -129,7 +129,14 @@ export function BugsPage(props: BugsPageProps) {
           onSelect={onSelectBug}
         />
       ) : (
-        <BugBoard bugs={bugs} onSelect={onSelectBug} />
+        <BugBoard
+          bugs={bugs}
+          {...(project.boardStatuses
+            ? { boardStatuses: project.boardStatuses }
+            : {})}
+          showClosedBugs={project.showClosedBugs ?? false}
+          onSelect={onSelectBug}
+        />
       )}
 
       {filterDialog && (
