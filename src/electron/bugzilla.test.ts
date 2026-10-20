@@ -122,23 +122,39 @@ describe("Bugzilla API client", () => {
     });
 
     const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.searchParams.getAll("resolution")).toEqual(["FIXED"]);
+    expect(url.searchParams.get("f1")).toBe("resolution");
+    expect(url.searchParams.get("o1")).toBe("equals");
+    expect(url.searchParams.get("v1")).toBe("FIXED");
   });
 
-  it("passes selected field filters through to the Bugzilla search", async () => {
+  it("passes selected field filters through Bugzilla advanced search params", async () => {
     fetchMock.mockResolvedValue(response({ bugs: [] }));
 
     await searchBugs({
       projectId: "browser",
       filters: [
         { field: "status", value: "NEW" },
-        { field: "assignedTo", value: "dev@example.com" },
+        {
+          field: "assignedTo",
+          operator: "notequals",
+          value: "dev@example.com",
+        },
+        { field: "summary", operator: "anywords", value: "crash hang" },
       ],
     });
 
     const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.searchParams.get("status")).toBe("NEW");
-    expect(url.searchParams.get("assigned_to")).toBe("dev@example.com");
+    expect(url.searchParams.get("f1")).toBe("bug_status");
+    expect(url.searchParams.get("o1")).toBe("equals");
+    expect(url.searchParams.get("v1")).toBe("NEW");
+    expect(url.searchParams.get("f2")).toBe("assigned_to");
+    expect(url.searchParams.get("o2")).toBe("notequals");
+    expect(url.searchParams.get("v2")).toBe("dev@example.com");
+    expect(url.searchParams.get("f3")).toBe("short_desc");
+    expect(url.searchParams.get("o3")).toBe("anywords");
+    expect(url.searchParams.get("v3")).toBe("crash hang");
+    expect(url.searchParams.get("status")).toBeNull();
+    expect(url.searchParams.get("assigned_to")).toBeNull();
   });
 
   it("requests configured list column fields when searching", async () => {

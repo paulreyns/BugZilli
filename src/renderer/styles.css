@@ -1553,7 +1553,7 @@ button:disabled {
 }
 
 .add-filter-dialog {
-  width: min(520px, calc(100vw - 48px));
+  width: min(720px, calc(100vw - 48px));
   margin-top: 14vh;
   padding: 0;
   color: #172b4d;
@@ -1648,15 +1648,16 @@ button:disabled {
 
 .add-filter-rules li {
   display: grid;
-  grid-template-columns: minmax(120px, 1.1fr) auto minmax(120px, 1.2fr) 30px;
+  grid-template-columns:
+    minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 30px;
   align-items: center;
   gap: 8px;
 }
 
-.add-filter-eq {
+.add-filter-rules input:disabled {
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  background: #f4f5f7;
+  cursor: not-allowed;
 }
 
 .add-filter-rules .text-button {

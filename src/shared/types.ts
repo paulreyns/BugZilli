@@ -1,6 +1,32 @@
+/** Bugzilla Custom Search / boolean-chart operator (`oN` query param). */
+export type FilterOperator =
+  | "equals"
+  | "notequals"
+  | "anyexact"
+  | "substring"
+  | "casesubstring"
+  | "notsubstring"
+  | "anywords"
+  | "allwords"
+  | "nowords"
+  | "anywordssubstr"
+  | "allwordssubstr"
+  | "nowordssubstr"
+  | "regexp"
+  | "notregexp"
+  | "lessthan"
+  | "lessthaneq"
+  | "greaterthan"
+  | "greaterthaneq"
+  | "isempty"
+  | "isnotempty";
+
 export interface FilterRule {
   /** App field key (e.g. status, assignedTo, cf_team). */
   field: string;
+  /** Comparison operator; defaults to equals when omitted (legacy saved filters). */
+  operator?: FilterOperator;
+  /** Compared value; unused for isempty / isnotempty. */
   value: string;
 }
 
@@ -50,7 +76,7 @@ export interface BugSearch {
   projectId: string;
   query?: string;
   limit?: number;
-  /** Field equality filters passed through to Bugzilla search. */
+  /** Field filters passed through to Bugzilla advanced search (fN/oN/vN). */
   filters?: FilterRule[];
 }
 

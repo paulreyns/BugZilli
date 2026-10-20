@@ -14,6 +14,7 @@ import type {
   BugCommentDraft,
   BugDetail,
   BugUpdate,
+  FilterRule,
   SavedFilter,
   SettingsUpdate,
 } from "../shared/types";
@@ -157,7 +158,7 @@ export default function App() {
     async (
       projectId: string,
       searchQuery = "",
-      filterRules?: { field: string; value: string }[],
+      filterRules?: FilterRule[],
     ) => {
       setLoadingBugs(true);
       setBugsError("");

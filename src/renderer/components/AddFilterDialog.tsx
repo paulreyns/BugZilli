@@ -4,8 +4,19 @@ import {
   DEFAULT_DETAIL_FIELDS,
   detailFieldDefinition,
 } from "../../shared/detail-fields";
-import { summarizeRules } from "../../shared/list-filters";
-import type { DetailFieldOption, FilterRule, SavedFilter } from "../../shared/types";
+import {
+  DEFAULT_FILTER_OPERATOR,
+  FILTER_OPERATORS,
+  normalizeFilterOperator,
+  operatorNeedsValue,
+  summarizeRules,
+} from "../../shared/list-filters";
+import type {
+  DetailFieldOption,
+  FilterOperator,
+  FilterRule,
+  SavedFilter,
+} from "../../shared/types";
 import { errorMessage } from "../errors";
 
 interface AddFilterDialogProps {
@@ -25,7 +36,13 @@ function defaultFieldOptions(): DetailFieldOption[] {
 }
 
 function emptyRule(): FilterRule {
-  return { field: "status", value: "" };
+  return { field: "status", operator: DEFAULT_FILTER_OPERATOR, value: "" };
+}
+
+function ruleIsComplete(rule: FilterRule): boolean {
+  if (!rule.field.trim()) return false;
+  const operator = normalizeFilterOperator(rule.operator);
+  return !operatorNeedsValue(operator) || Boolean(rule.value.trim());
 }
 
 export function AddFilterDialog({
@@ -39,7 +56,11 @@ export function AddFilterDialog({
   const [name, setName] = useState(initialFilter?.name ?? "");
   const [rules, setRules] = useState<FilterRule[]>(
     initialFilter?.rules.length
-      ? initialFilter.rules.map((rule) => ({ ...rule }))
+      ? initialFilter.rules.map((rule) => ({
+          field: rule.field,
+          operator: normalizeFilterOperator(rule.operator),
+          value: rule.value,
+        }))
       : [emptyRule()],
   );
   const [fields, setFields] = useState<DetailFieldOption[]>(defaultFieldOptions);
@@ -74,14 +95,22 @@ export function AddFilterDialog({
     };
   }, [product]);
 
-  const cleanedRules = rules.filter(
-    (rule) => rule.field.trim() && rule.value.trim(),
-  );
+  const cleanedRules = rules.filter(ruleIsComplete);
   const canSave = cleanedRules.length > 0;
 
   function updateRule(index: number, patch: Partial<FilterRule>) {
     setRules((current) =>
-      current.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)),
+      current.map((rule, i) => {
+        if (i !== index) return rule;
+        const next = { ...rule, ...patch };
+        if (
+          patch.operator &&
+          !operatorNeedsValue(normalizeFilterOperator(patch.operator))
+        ) {
+          next.value = "";
+        }
+        return next;
+      }),
     );
   }
 
@@ -94,10 +123,14 @@ export function AddFilterDialog({
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSave) return;
-    const savedRules = cleanedRules.map((rule) => ({
-      field: rule.field.trim(),
-      value: rule.value.trim(),
-    }));
+    const savedRules = cleanedRules.map((rule) => {
+      const operator = normalizeFilterOperator(rule.operator);
+      return {
+        field: rule.field.trim(),
+        operator,
+        value: operatorNeedsValue(operator) ? rule.value.trim() : "",
+      };
+    });
     onSave({
       id: initialFilter?.id ?? crypto.randomUUID(),
       name: name.trim() || summarizeRules(savedRules),
@@ -156,49 +189,66 @@ export function AddFilterDialog({
             </p>
           )}
           <ul>
-            {rules.map((rule, index) => (
-              <li key={index}>
-                <select
-                  value={rule.field}
-                  aria-label={`Field ${index + 1}`}
-                  onChange={(event) =>
-                    updateRule(index, { field: event.target.value })
-                  }
-                >
-                  {fields.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                  {!fields.some((option) => option.key === rule.field) &&
-                    rule.field && (
-                      <option value={rule.field}>
-                        {detailFieldDefinition(rule.field).label}
+            {rules.map((rule, index) => {
+              const operator = normalizeFilterOperator(rule.operator);
+              const needsValue = operatorNeedsValue(operator);
+              return (
+                <li key={index}>
+                  <select
+                    value={rule.field}
+                    aria-label={`Field ${index + 1}`}
+                    onChange={(event) =>
+                      updateRule(index, { field: event.target.value })
+                    }
+                  >
+                    {fields.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
                       </option>
-                    )}
-                </select>
-                <span className="add-filter-eq" aria-hidden="true">
-                  =
-                </span>
-                <input
-                  value={rule.value}
-                  onChange={(event) =>
-                    updateRule(index, { value: event.target.value })
-                  }
-                  placeholder="Value"
-                  aria-label={`Value ${index + 1}`}
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  className="icon-button"
-                  aria-label={`Remove field ${index + 1}`}
-                  onClick={() => removeRule(index)}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </li>
-            ))}
+                    ))}
+                    {!fields.some((option) => option.key === rule.field) &&
+                      rule.field && (
+                        <option value={rule.field}>
+                          {detailFieldDefinition(rule.field).label}
+                        </option>
+                      )}
+                  </select>
+                  <select
+                    value={operator}
+                    aria-label={`Operator ${index + 1}`}
+                    onChange={(event) =>
+                      updateRule(index, {
+                        operator: event.target.value as FilterOperator,
+                      })
+                    }
+                  >
+                    {FILTER_OPERATORS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={rule.value}
+                    onChange={(event) =>
+                      updateRule(index, { value: event.target.value })
+                    }
+                    placeholder={needsValue ? "Value" : "No value needed"}
+                    aria-label={`Value ${index + 1}`}
+                    autoComplete="off"
+                    disabled={!needsValue}
+                  />
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={`Remove field ${index + 1}`}
+                    onClick={() => removeRule(index)}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
           <button
             type="button"
