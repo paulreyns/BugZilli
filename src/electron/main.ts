@@ -1,14 +1,16 @@
-import { app, BrowserWindow, clipboard, ipcMain, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain } from "electron";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   addAttachment,
   addComment,
+  getAttachmentFile,
   getBug,
   getProductDetailFields,
   searchBugs,
   updateBug,
 } from "./bugzilla.js";
-import { getConnection, getSettings, saveSettings } from "./settings.js";
+import { getSettings, saveSettings } from "./settings.js";
 import type {
   BugAttachmentDraft,
   BugCommentDraft,
@@ -68,10 +70,18 @@ function registerHandlers(): void {
     (_event, id: number, attachment: BugAttachmentDraft) =>
       addAttachment(id, attachment),
   );
-  ipcMain.handle("attachments:open", async (_event, id: number) => {
-    if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid attachment.");
-    const { baseUrl } = await getConnection();
-    await shell.openExternal(`${baseUrl}/attachment.cgi?id=${id}`);
+  ipcMain.handle("attachments:open", async (event, id: number) => {
+    const attachment = await getAttachmentFile(id);
+    const window = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: "Save attachment",
+      defaultPath: attachment.fileName,
+    };
+    const result = window
+      ? await dialog.showSaveDialog(window, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return;
+    await writeFile(result.filePath, attachment.data);
   });
   ipcMain.handle("clipboard:read-text", () => clipboard.readText());
 }
