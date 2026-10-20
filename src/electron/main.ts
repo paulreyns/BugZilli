@@ -84,6 +84,9 @@ function registerHandlers(): void {
     await writeFile(result.filePath, attachment.data);
   });
   ipcMain.handle("clipboard:read-text", () => clipboard.readText());
+  ipcMain.handle("clipboard:write-text", (_event, text: string) =>
+    clipboard.writeText(text),
+  );
 }
 
 void app.whenReady().then(() => {

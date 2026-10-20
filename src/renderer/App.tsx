@@ -338,6 +338,7 @@ export default function App() {
     content = (
       <BugDetailPage
         {...(selectedBug ? { bug: selectedBug } : {})}
+        baseUrl={settings.baseUrl}
         loading={loadingDetail}
         error={detailError}
         detailFields={resolveDetailFields(activeProject?.detailFields)}
