@@ -195,7 +195,7 @@ export async function searchBugs(search: BugSearch): Promise<Bug[]> {
   const params = new URLSearchParams({
     product: project.product,
     include_fields: includeFieldsForProject(project),
-    limit: String(Math.min(Math.max(search.limit ?? 200, 1), 500)),
+    limit: String(Math.min(Math.max(search.limit ?? 300, 1), 500)),
     order: "changeddate DESC",
   });
   if (!project.showClosedBugs) params.set("resolution", "---");
