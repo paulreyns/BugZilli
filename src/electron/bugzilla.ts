@@ -1,8 +1,9 @@
 import {
   baseBugFields,
   bugzillaNameForKey,
-  catalogFromBugRecord,
+  catalogFromFieldApi,
   keyForBugzillaField,
+  type BugzillaFieldApiRecord,
 } from "../shared/detail-fields.js";
 import {
   appendFilterParams,
@@ -316,12 +317,21 @@ function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
       throw new Error("Custom fields must be a map of text values.");
     }
     for (const [key, value] of Object.entries(update.extraFields)) {
-      if (typeof value !== "string") {
-        throw new Error("Custom field values must be text.");
-      }
       const field = bugzillaNameForKey(key);
       if (!field || field === "ids") {
         throw new Error(`Invalid custom field "${key}".`);
+      }
+      if (Array.isArray(value)) {
+        body[field] = value.map((entry) => {
+          if (typeof entry !== "string") {
+            throw new Error("Custom field list values must be text.");
+          }
+          return entry.trim();
+        }).filter(Boolean);
+        continue;
+      }
+      if (typeof value !== "string") {
+        throw new Error("Custom field values must be text.");
       }
       body[field] = value.trim();
     }
@@ -349,25 +359,18 @@ export async function getProductDetailFields(
     throw new Error("Set the Bugzilla product name before loading fields.");
   }
 
-  // Ensure a Bugzilla connection is configured before searching.
+  // Ensure a Bugzilla connection is configured before fetching fields.
   await getConnection();
 
-  const params = new URLSearchParams({
-    product: trimmed,
-    limit: "1",
-    order: "changeddate DESC",
-  });
-  const payload = await request("bug", { params });
-  const bugValue = Array.isArray(payload.bugs)
-    ? (payload.bugs[0] as JsonRecord | undefined)
-    : undefined;
-  if (!bugValue) {
-    throw new Error(
-      `No bugs found for product "${trimmed}". Create one in Bugzilla, then try again.`,
-    );
+  const payload = await request("field/bug");
+  const fields = Array.isArray(payload.fields)
+    ? (payload.fields as BugzillaFieldApiRecord[])
+    : [];
+  if (fields.length === 0) {
+    throw new Error("Bugzilla returned no bug fields.");
   }
 
-  return catalogFromBugRecord(bugValue).map(({ key, label }) => ({ key, label }));
+  return catalogFromFieldApi(fields, trimmed);
 }
 
 export async function updateBug(id: number, update: BugUpdate): Promise<BugDetail> {

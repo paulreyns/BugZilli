@@ -76,6 +76,33 @@ describe("bug update drafts", () => {
     ).toBeNull();
   });
 
+  it("sends multiselect custom fields as string arrays", () => {
+    const withTags: Bug = {
+      ...bug,
+      extraFields: { ...bug.extraFields, cf_tags: "alpha, beta" },
+    };
+    expect(
+      buildBugUpdate(
+        withTags,
+        draft({
+          extraFields: { cf_tags: "beta, gamma" },
+        }),
+        { cf_tags: "multiselect" },
+      ),
+    ).toEqual({
+      extraFields: { cf_tags: ["beta", "gamma"] },
+    });
+    expect(
+      buildBugUpdate(
+        withTags,
+        draft({
+          extraFields: { cf_tags: " beta, alpha " },
+        }),
+        { cf_tags: "multiselect" },
+      ),
+    ).toEqual({});
+  });
+
   it("requires a resolution when closing and omits it when reopening", () => {
     expect(validateBugDraft(bug, draft({ status: "RESOLVED" }))).toBe(
       "Choose a resolution before closing this bug.",

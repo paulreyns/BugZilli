@@ -283,32 +283,54 @@ describe("Bugzilla API client", () => {
     });
   });
 
-  it("loads detail field options from one product bug", async () => {
+  it("loads detail field options from /rest/field/bug", async () => {
     fetchMock.mockResolvedValue(
       response({
-        bugs: [
+        fields: [
           {
-            id: 9,
-            summary: "Sample",
-            product: "Browser",
-            status: "NEW",
-            assigned_to: "dev@example.com",
-            whiteboard: "[triaged]",
-            cf_blocking: "yes",
+            name: "assigned_to",
+            display_name: "Assignee",
+            type: 1,
+          },
+          {
+            name: "whiteboard",
+            display_name: "Whiteboard",
+            type: 1,
+          },
+          {
+            name: "cf_blocking",
+            display_name: "Blocking",
+            type: 2,
+            values: [
+              { name: "yes", sort_key: 1 },
+              { name: "no", sort_key: 2 },
+            ],
+          },
+          {
+            name: "summary",
+            display_name: "Summary",
+            type: 1,
           },
         ],
       }),
     );
 
     const fields = await getProductDetailFields("Browser");
-    const keys = fields.map(({ key }) => key);
-    expect(keys).toContain("assignedTo");
-    expect(keys).toContain("whiteboard");
-    expect(keys).toContain("cf_blocking");
+    const byKey = new Map(fields.map((field) => [field.key, field]));
+    expect(byKey.has("assignedTo")).toBe(true);
+    expect(byKey.get("whiteboard")).toMatchObject({
+      label: "Whiteboard",
+      type: "text",
+    });
+    expect(byKey.get("cf_blocking")).toMatchObject({
+      label: "Blocking",
+      type: "select",
+      values: ["yes", "no"],
+    });
+    expect(byKey.has("summary")).toBe(false);
 
     const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.searchParams.get("product")).toBe("Browser");
-    expect(url.searchParams.get("limit")).toBe("1");
+    expect(url.pathname).toBe("/rest/field/bug");
   });
 
   it("surfaces Bugzilla error messages", async () => {
@@ -418,6 +440,7 @@ describe("Bugzilla API client", () => {
       extraFields: {
         cf_team: " Apps ",
         whiteboard: "[ready]",
+        cf_tags: ["alpha", " beta "],
       },
     });
 
@@ -426,6 +449,7 @@ describe("Bugzilla API client", () => {
       ids: [42],
       cf_team: "Apps",
       whiteboard: "[ready]",
+      cf_tags: ["alpha", "beta"],
     });
   });
 

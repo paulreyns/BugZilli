@@ -53,9 +53,30 @@ export interface Project {
   filters?: SavedFilter[];
 }
 
+/**
+ * Bugzilla field types from `GET /rest/field/bug` (`type` integer),
+ * mapped to stable app names for UI and updates.
+ */
+export type DetailFieldType =
+  | "unknown"
+  | "text"
+  | "select"
+  | "multiselect"
+  | "textarea"
+  | "datetime"
+  | "bugid"
+  | "seealso"
+  | "keywords"
+  | "date"
+  | "integer";
+
 export interface DetailFieldOption {
   key: string;
   label: string;
+  /** Bugzilla field type; omitted when type is unknown. */
+  type?: DetailFieldType;
+  /** Legal values for select / multiselect fields (product-filtered when possible). */
+  values?: string[];
 }
 
 export interface AppSettings {
@@ -138,8 +159,11 @@ export interface BugUpdate {
   version?: string;
   platform?: string;
   keywords?: string[];
-  /** Custom / uncommon Bugzilla fields keyed by app field key (e.g. cf_team). */
-  extraFields?: Record<string, string>;
+  /**
+   * Custom / uncommon Bugzilla fields keyed by app field key (e.g. cf_team).
+   * Multiselect fields use a string array; others use a single string.
+   */
+  extraFields?: Record<string, string | string[]>;
 }
 
 export interface BugCommentDraft {
