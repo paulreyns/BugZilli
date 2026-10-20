@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  STATUS_SUGGESTIONS,
   buildBugUpdate,
   draftFromBug,
+  fieldEditorMeta,
   validateBugDraft,
   type BugDraft,
 } from "../shared/bug-update.js";
@@ -136,5 +138,38 @@ describe("bug update drafts", () => {
     expect(validateBugDraft(bug, draft({ summary: "   " }))).toBe(
       "Summary cannot be empty.",
     );
+  });
+
+  it("prefers Bugzilla field values for standard select editors", () => {
+    expect(
+      fieldEditorMeta("priority", {
+        key: "priority",
+        label: "Priority",
+        type: "select",
+        values: ["P1", "P2"],
+      }),
+    ).toEqual({ type: "select", values: ["P1", "P2"] });
+
+    expect(
+      fieldEditorMeta("component", {
+        key: "component",
+        label: "Component",
+        type: "select",
+        values: ["UI", "Networking"],
+      }),
+    ).toEqual({ type: "select", values: ["UI", "Networking"] });
+
+    expect(fieldEditorMeta("status")).toEqual({
+      type: "select",
+      values: [...STATUS_SUGGESTIONS],
+    });
+
+    expect(
+      fieldEditorMeta("assignedTo", {
+        key: "assignedTo",
+        label: "Assignee",
+        type: "text",
+      }),
+    ).toEqual({ type: "text" });
   });
 });

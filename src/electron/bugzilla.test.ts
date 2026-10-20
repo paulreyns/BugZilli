@@ -293,7 +293,16 @@ describe("Bugzilla API client", () => {
             type: 1,
           },
           {
-            name: "whiteboard",
+            name: "bug_status",
+            display_name: "Status",
+            type: 2,
+            values: [
+              { name: "NEW", sort_key: 1 },
+              { name: "ASSIGNED", sort_key: 2 },
+            ],
+          },
+          {
+            name: "status_whiteboard",
             display_name: "Whiteboard",
             type: 1,
           },
@@ -318,6 +327,11 @@ describe("Bugzilla API client", () => {
     const fields = await getProductDetailFields("Browser");
     const byKey = new Map(fields.map((field) => [field.key, field]));
     expect(byKey.has("assignedTo")).toBe(true);
+    expect(byKey.get("status")).toMatchObject({
+      type: "select",
+      values: ["NEW", "ASSIGNED"],
+    });
+    expect(byKey.has("bug_status")).toBe(false);
     expect(byKey.get("whiteboard")).toMatchObject({
       label: "Whiteboard",
       type: "text",

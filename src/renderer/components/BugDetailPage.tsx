@@ -17,12 +17,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
-  PRIORITY_SUGGESTIONS,
-  RESOLUTION_SUGGESTIONS,
-  SEVERITY_SUGGESTIONS,
-  STATUS_SUGGESTIONS,
   buildBugUpdate,
   draftFromBug,
+  fieldEditorMeta,
   isClosedStatus,
   isOpenStatus,
   parseKeywords,
@@ -550,102 +547,56 @@ function DetailField({
   const label = fieldOption?.label || definition.label;
 
   if (form && definition.editable) {
+    const editor = fieldEditorMeta(fieldKey, fieldOption);
+    const control = (id: string, value: string, onChange: (value: string) => void, disabled = pending) => (
+      <ExtraFieldControl
+        id={id}
+        label={label}
+        icon={icon}
+        value={value}
+        type={editor.type}
+        values={editor.values}
+        disabled={disabled}
+        onChange={onChange}
+      />
+    );
+
     switch (definition.editable) {
       case "status":
-        return (
-          <TextControl
-            id="bug-status"
-            label={label}
-            icon={icon}
-            value={form.status}
-            suggestions={STATUS_SUGGESTIONS}
-            disabled={pending}
-            onChange={(status) => onDraftChange({ status })}
-          />
-        );
+        return control("bug-status", form.status, (status) => onDraftChange({ status }));
       case "assignedTo":
-        return (
-          <TextControl
-            id="bug-assignee"
-            label={label}
-            icon={icon}
-            value={form.assignedTo}
-            disabled={pending}
-            onChange={(assignedTo) => onDraftChange({ assignedTo })}
-          />
+        return control("bug-assignee", form.assignedTo, (assignedTo) =>
+          onDraftChange({ assignedTo }),
         );
       case "priority":
-        return (
-          <TextControl
-            id="bug-priority"
-            label={label}
-            icon={icon}
-            value={form.priority}
-            suggestions={PRIORITY_SUGGESTIONS}
-            disabled={pending}
-            onChange={(priority) => onDraftChange({ priority })}
-          />
+        return control("bug-priority", form.priority, (priority) =>
+          onDraftChange({ priority }),
         );
       case "severity":
-        return (
-          <TextControl
-            id="bug-severity"
-            label={label}
-            icon={icon}
-            value={form.severity}
-            suggestions={SEVERITY_SUGGESTIONS}
-            disabled={pending}
-            onChange={(severity) => onDraftChange({ severity })}
-          />
+        return control("bug-severity", form.severity, (severity) =>
+          onDraftChange({ severity }),
         );
       case "component":
-        return (
-          <TextControl
-            id="bug-component"
-            label={label}
-            icon={icon}
-            value={form.component}
-            suggestions={fieldOption?.values}
-            disabled={pending}
-            onChange={(component) => onDraftChange({ component })}
-          />
+        return control("bug-component", form.component, (component) =>
+          onDraftChange({ component }),
         );
       case "version":
-        return (
-          <TextControl
-            id="bug-version"
-            label={label}
-            icon={icon}
-            value={form.version}
-            suggestions={fieldOption?.values}
-            disabled={pending}
-            onChange={(version) => onDraftChange({ version })}
-          />
+        return control("bug-version", form.version, (version) =>
+          onDraftChange({ version }),
         );
       case "platform":
-        return (
-          <TextControl
-            id="bug-platform"
-            label={label}
-            icon={icon}
-            value={form.platform}
-            suggestions={fieldOption?.values}
-            disabled={pending}
-            onChange={(platform) => onDraftChange({ platform })}
-          />
+        return control("bug-platform", form.platform, (platform) =>
+          onDraftChange({ platform }),
         );
       case "resolution":
         return (
           <>
-            <TextControl
-              id="bug-resolution"
-              label={label}
-              icon={icon}
-              value={form.resolution}
-              suggestions={RESOLUTION_SUGGESTIONS}
-              disabled={pending || isOpenStatus(form.status)}
-              onChange={(resolution) => onDraftChange({ resolution })}
-            />
+            {control(
+              "bug-resolution",
+              form.resolution,
+              (resolution) => onDraftChange({ resolution }),
+              pending || isOpenStatus(form.status),
+            )}
             <p className="field-hint">
               {isClosedStatus(form.status)
                 ? "Required while this bug is closed."
@@ -655,20 +606,21 @@ function DetailField({
             </p>
           </>
         );
-      case "keywords":
+      case "keywords": {
+        const usesValueList =
+          (editor.type === "multiselect" || editor.type === "keywords") &&
+          (editor.values?.length ?? 0) > 0;
         return (
           <>
-            <TextControl
-              id="bug-keywords"
-              label={label}
-              icon={icon}
-              value={form.keywords}
-              disabled={pending}
-              onChange={(keywords) => onDraftChange({ keywords })}
-            />
-            <p className="field-hint">Separate keywords with commas.</p>
+            {control("bug-keywords", form.keywords, (keywords) =>
+              onDraftChange({ keywords }),
+            )}
+            {!usesValueList ? (
+              <p className="field-hint">Separate keywords with commas.</p>
+            ) : null}
           </>
         );
+      }
       default:
         break;
     }
@@ -824,7 +776,10 @@ function ExtraFieldControl({
     );
   }
 
-  if (type === "multiselect" && options.length > 0) {
+  if (
+    (type === "multiselect" || type === "keywords") &&
+    options.length > 0
+  ) {
     const selected = new Set(parseKeywords(value));
     return (
       <div className="detail-row">
