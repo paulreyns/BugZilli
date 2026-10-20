@@ -28,11 +28,17 @@ interface AddFilterDialogProps {
 }
 
 function defaultFieldOptions(): DetailFieldOption[] {
-  const keys = ["status", ...DEFAULT_DETAIL_FIELDS];
+  const keys = ["status", "summary", ...DEFAULT_DETAIL_FIELDS];
   return keys.map((key) => ({
     key,
     label: detailFieldDefinition(key).label,
   }));
+}
+
+function includeSummaryField(options: DetailFieldOption[]): DetailFieldOption[] {
+  return options.some(({ key }) => key === "summary")
+    ? options
+    : [...options, { key: "summary", label: "Summary" }];
 }
 
 function emptyRule(): FilterRule {
@@ -80,7 +86,11 @@ export function AddFilterDialog({
       .getProductDetailFields(product)
       .then((options) => {
         if (!active) return;
-        setFields(options.length > 0 ? options : defaultFieldOptions());
+        setFields(
+          options.length > 0
+            ? includeSummaryField(options)
+            : defaultFieldOptions(),
+        );
       })
       .catch((error: unknown) => {
         if (!active) return;
