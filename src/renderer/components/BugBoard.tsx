@@ -1,9 +1,10 @@
-import { groupBugsByBoardStatus } from "../../shared/board-statuses";
+import { groupBugsByBoard } from "../../shared/board-statuses";
 import type { Bug } from "../../shared/types";
 import { initials, statusClass } from "./BugViewShared";
 
 interface BugBoardProps {
   bugs: Bug[];
+  boardGroupBy?: string;
   boardStatuses?: string[];
   showClosedBugs?: boolean;
   onSelect: (id: number) => void;
@@ -11,11 +12,19 @@ interface BugBoardProps {
 
 export function BugBoard({
   bugs,
+  boardGroupBy,
   boardStatuses,
   showClosedBugs,
   onSelect,
 }: BugBoardProps) {
-  const columns = groupBugsByBoardStatus(bugs, boardStatuses, showClosedBugs);
+  const columns = groupBugsByBoard(
+    {
+      ...(boardGroupBy !== undefined ? { groupBy: boardGroupBy } : {}),
+      ...(boardStatuses !== undefined ? { columns: boardStatuses } : {}),
+      ...(showClosedBugs !== undefined ? { showClosedBugs } : {}),
+    },
+    bugs,
+  );
 
   return (
     <div className="board">

@@ -1049,6 +1049,37 @@ button:disabled {
   gap: 4px;
 }
 
+.board-group-by {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.board-group-by select {
+  max-width: 320px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.board-group-by small {
+  font-weight: 400;
+  font-size: 11px;
+  color: #8993a4;
+}
+
+.board-column-order-header {
+  margin-top: 4px;
+}
+
 .board-statuses-layout {
   grid-template-columns: 1fr;
 }

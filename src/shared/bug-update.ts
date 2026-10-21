@@ -77,7 +77,8 @@ export function parseKeywords(value: string): string[] {
     .filter((keyword) => keyword.length > 0);
 }
 
-const FALLBACK_SELECT_VALUES: Record<string, readonly string[]> = {
+/** Built-in legal values for common Bugzilla select fields. */
+export const FALLBACK_SELECT_VALUES: Record<string, readonly string[]> = {
   status: STATUS_SUGGESTIONS,
   priority: PRIORITY_SUGGESTIONS,
   severity: SEVERITY_SUGGESTIONS,

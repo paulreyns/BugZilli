@@ -1,6 +1,9 @@
 import { KeyRound, Plus, Save, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { defaultBoardStatuses } from "../../shared/board-statuses";
+import {
+  DEFAULT_BOARD_GROUP_BY,
+  defaultBoardStatuses,
+} from "../../shared/board-statuses";
 import { defaultDetailFields } from "../../shared/detail-fields";
 import { defaultListColumns } from "../../shared/list-columns";
 import type {
@@ -51,6 +54,7 @@ export function SettingsPage({
       showClosedBugs: false,
       detailFields: defaultDetailFields(),
       listColumns: defaultListColumns(),
+      boardGroupBy: DEFAULT_BOARD_GROUP_BY,
       boardStatuses: defaultBoardStatuses(),
     };
     setProjects((current) => [...current, project]);
@@ -240,9 +244,17 @@ export function SettingsPage({
                   </span>
                 </label>
                 <BoardStatusesEditor
+                  product={project.product}
+                  boardGroupBy={project.boardGroupBy}
                   boardStatuses={project.boardStatuses}
                   showClosedBugs={project.showClosedBugs ?? false}
-                  onChange={(statuses) =>
+                  onGroupByChange={(groupBy, columns) =>
+                    updateProject(project.id, {
+                      boardGroupBy: groupBy,
+                      boardStatuses: columns,
+                    })
+                  }
+                  onColumnsChange={(statuses) =>
                     updateProject(project.id, { boardStatuses: statuses })
                   }
                 />
