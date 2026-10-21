@@ -131,6 +131,9 @@ export function BugsPage(props: BugsPageProps) {
       ) : (
         <BugBoard
           bugs={bugs}
+          {...(project.boardGroupBy
+            ? { boardGroupBy: project.boardGroupBy }
+            : {})}
           {...(project.boardStatuses
             ? { boardStatuses: project.boardStatuses }
             : {})}

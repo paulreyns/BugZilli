@@ -54,6 +54,10 @@ function cleanProjects(projects: Project[]): Project[] {
     }
     const detailFields = cleanFieldKeys(project.detailFields);
     const listColumns = cleanFieldKeys(project.listColumns);
+    const boardGroupBy =
+      typeof project.boardGroupBy === "string"
+        ? project.boardGroupBy.trim()
+        : "";
     const boardStatuses = cleanFieldKeys(project.boardStatuses);
     const filters = cleanSavedFilters(project.filters);
     return {
@@ -66,6 +70,9 @@ function cleanProjects(projects: Project[]): Project[] {
       ...(project.showClosedBugs ? { showClosedBugs: true } : {}),
       ...(detailFields ? { detailFields } : {}),
       ...(listColumns ? { listColumns } : {}),
+      ...(boardGroupBy && boardGroupBy !== "status"
+        ? { boardGroupBy }
+        : {}),
       ...(boardStatuses ? { boardStatuses } : {}),
       ...(filters ? { filters } : {}),
     };
