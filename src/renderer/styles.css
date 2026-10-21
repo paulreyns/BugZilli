@@ -680,19 +680,23 @@ button:disabled {
 }
 
 .board {
-  display: grid;
-  grid-auto-columns: minmax(265px, 1fr);
-  grid-auto-flow: column;
+  display: flex;
   gap: 14px;
   padding-bottom: 20px;
   overflow-x: auto;
 }
 
 .board-column {
+  flex: 1 0 265px;
   min-height: 480px;
   padding: 10px;
   border-radius: 8px;
   background: #f4f5f7;
+}
+
+.board-column.is-collapsed {
+  flex: 0 0 48px;
+  padding: 10px 6px;
 }
 
 .board-column > header {
@@ -709,6 +713,44 @@ button:disabled {
   font-size: 11px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.board-column-title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.board-column-title:hover {
+  color: var(--blue);
+}
+
+.board-column-title:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.board-column.is-collapsed > header {
+  flex-direction: column;
+  height: auto;
+  gap: 10px;
+  padding: 0;
+}
+
+.board-column.is-collapsed h2 {
+  flex: none;
+}
+
+.board-column.is-collapsed .board-column-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
 
 .board-column header > span:last-child {
