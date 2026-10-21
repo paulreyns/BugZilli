@@ -1685,6 +1685,7 @@ select.detail-control {
   border-radius: 5px;
   color: #172b4d;
   background: white;
+  font-size: 13px;
 }
 
 .add-filter-name input:focus,
