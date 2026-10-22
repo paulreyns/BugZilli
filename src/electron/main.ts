@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from "electron";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -36,7 +36,20 @@ function createWindow(): void {
   });
 
   window.setMenuBarVisibility(false);
-  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const externalUrl = new URL(url);
+      if (externalUrl.protocol === "http:" || externalUrl.protocol === "https:") {
+        void shell.openExternal(externalUrl.toString()).catch((error: unknown) => {
+          console.error("Failed to open external URL:", error);
+        });
+      }
+    } catch (error) {
+      console.error("Failed to parse external URL:", error);
+    }
+
+    return { action: "deny" };
+  });
   window.webContents.on("will-navigate", (event) => event.preventDefault());
 
   const developmentUrl = process.env.VITE_DEV_SERVER_URL;

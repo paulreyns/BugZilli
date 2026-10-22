@@ -771,11 +771,38 @@ function CommentList({
             <time>{formatDetailDate(comment.creationTime)}</time>
             {comment.isPrivate && <span className="private-pill">Private</span>}
           </header>
-          <div className="comment-body">{comment.text}</div>
+          <div className="comment-body">{renderCommentText(comment.text)}</div>
         </div>
       </article>
     );
   });
+}
+
+function renderCommentText(text: string): ReactNode {
+  const urlPattern = /https?:\/\/[^\s<>"']+/gi;
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(urlPattern)) {
+    const fullMatch = match[0];
+    const trailingPunctuation = fullMatch.match(/[.,!?;:)\]}]+$/)?.[0] ?? "";
+    const url = fullMatch.slice(0, fullMatch.length - trailingPunctuation.length);
+    const startIndex = match.index ?? 0;
+
+    if (url.length === 0) continue;
+
+    parts.push(text.slice(lastIndex, startIndex));
+    parts.push(
+      <a href={url} key={startIndex} rel="noreferrer" target="_blank">
+        {url}
+      </a>,
+    );
+    parts.push(trailingPunctuation);
+    lastIndex = startIndex + fullMatch.length;
+  }
+
+  parts.push(text.slice(lastIndex));
+  return <>{parts}</>;
 }
 
 function CommentComposer({
