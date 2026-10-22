@@ -90,6 +90,8 @@ export interface DetailFieldOption {
 export interface AppSettings {
   baseUrl: string;
   projects: Project[];
+  /** Bugzilla login whose comments appear under the Integrations tab. */
+  integrationUser: string;
   hasApiKey: boolean;
   keyStorage: "secure" | "plain" | "none";
 }
@@ -97,6 +99,8 @@ export interface AppSettings {
 export interface SettingsUpdate {
   baseUrl: string;
   projects: Project[];
+  /** Omit to keep the saved value; an empty string clears it. */
+  integrationUser?: string;
   apiKey?: string;
   clearApiKey?: boolean;
 }
