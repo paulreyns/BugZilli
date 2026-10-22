@@ -347,6 +347,7 @@ export default function App() {
           setSelectedBug(undefined);
           setDetailError("");
         }}
+        onOpenBug={(id) => void openBug(id)}
         onOpenAttachment={(id) => window.bugzilli.openAttachment(id)}
         onUpdateBug={updateBug}
         onAddComment={addComment}
