@@ -23,7 +23,6 @@ import {
   fieldEditorMeta,
   isClosedStatus,
   isOpenStatus,
-  parseKeywords,
   validateBugDraft,
   type BugDraft,
 } from "../../shared/bug-update";
@@ -46,6 +45,8 @@ import {
   type DetailFieldType,
 } from "../../shared/types";
 import { errorMessage } from "../errors";
+import { formatDetailDate } from "../utils/date";
+import { FieldControl } from "./field-controls/FieldControl";
 
 interface BugDetailPageProps {
   bug?: BugDetail;
@@ -62,14 +63,6 @@ interface BugDetailPageProps {
 }
 
 type PendingAction = "save" | "comment" | "attachment";
-
-function displayDate(value: string): string {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 function fileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -572,7 +565,7 @@ function DetailField({
   if (form && definition.editable) {
     const editor = fieldEditorMeta(fieldKey, fieldOption);
     const control = (id: string, value: string, onChange: (value: string) => void, disabled = pending) => (
-      <ExtraFieldControl
+      <FieldControl
         id={id}
         label={label}
         icon={icon}
@@ -651,7 +644,7 @@ function DetailField({
 
   if (form && isExtraDetailField(fieldKey)) {
     return (
-      <ExtraFieldControl
+      <FieldControl
         id={`bug-field-${fieldKey}`}
         label={label}
         icon={icon}
@@ -693,7 +686,7 @@ function DetailField({
     const raw = readBugFieldValue(bug, fieldKey);
     return (
       <DetailRow label={label} icon={icon}>
-        <strong>{displayDate(typeof raw === "string" ? raw : "")}</strong>
+        <strong>{formatDetailDate(typeof raw === "string" ? raw : "")}</strong>
       </DetailRow>
     );
   }
@@ -729,203 +722,6 @@ function DetailField({
   );
 }
 
-function toDateInputValue(value: string): string {
-  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
-  return match?.[1] ?? "";
-}
-
-function toDateTimeLocalValue(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const normalized = trimmed.includes("T")
-    ? trimmed
-    : trimmed.replace(" ", "T");
-  const match = normalized.match(
-    /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2})?/,
-  );
-  if (!match) return "";
-  return `${match[1]}T${match[2]}`;
-}
-
-function fromDateTimeLocalValue(value: string): string {
-  if (!value) return "";
-  return value.length === 16 ? `${value}:00` : value;
-}
-
-function ExtraFieldControl({
-  id,
-  label,
-  icon,
-  value,
-  type,
-  values,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  value: string;
-  type?: DetailFieldType | undefined;
-  values?: string[] | undefined;
-  disabled: boolean;
-  onChange: (value: string) => void;
-}) {
-  const options = values ?? [];
-
-  if (type === "select" && options.length > 0) {
-    const selectOptions =
-      value && !options.includes(value) ? [value, ...options] : options;
-    return (
-      <div className="detail-row">
-        <label className="detail-label" htmlFor={id}>
-          {icon} {label}
-        </label>
-        <select
-          id={id}
-          className="detail-control"
-          value={value}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          <option value="">—</option>
-          {selectOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  if (
-    (type === "multiselect" || type === "keywords") &&
-    options.length > 0
-  ) {
-    const selected = new Set(parseKeywords(value));
-    return (
-      <div className="detail-row">
-        <span className="detail-label" id={`${id}-label`}>
-          {icon} {label}
-        </span>
-        <div
-          className="detail-multiselect"
-          role="group"
-          aria-labelledby={`${id}-label`}
-        >
-          {options.map((option) => {
-            const checked = selected.has(option);
-            return (
-              <label key={option} className="detail-multiselect-option">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={disabled}
-                  onChange={() => {
-                    const next = new Set(selected);
-                    if (checked) next.delete(option);
-                    else next.add(option);
-                    onChange([...next].join(", "));
-                  }}
-                />
-                <span>{option}</span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "textarea") {
-    return (
-      <div className="detail-row">
-        <label className="detail-label" htmlFor={id}>
-          {icon} {label}
-        </label>
-        <textarea
-          id={id}
-          className="detail-control detail-control-textarea"
-          value={value}
-          disabled={disabled}
-          rows={4}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </div>
-    );
-  }
-
-  if (type === "date") {
-    return (
-      <div className="detail-row">
-        <label className="detail-label" htmlFor={id}>
-          {icon} {label}
-        </label>
-        <input
-          id={id}
-          className="detail-control"
-          type="date"
-          value={toDateInputValue(value)}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </div>
-    );
-  }
-
-  if (type === "datetime") {
-    return (
-      <div className="detail-row">
-        <label className="detail-label" htmlFor={id}>
-          {icon} {label}
-        </label>
-        <input
-          id={id}
-          className="detail-control"
-          type="datetime-local"
-          value={toDateTimeLocalValue(value)}
-          disabled={disabled}
-          onChange={(event) =>
-            onChange(fromDateTimeLocalValue(event.target.value))
-          }
-        />
-      </div>
-    );
-  }
-
-  if (type === "integer") {
-    return (
-      <div className="detail-row">
-        <label className="detail-label" htmlFor={id}>
-          {icon} {label}
-        </label>
-        <input
-          id={id}
-          className="detail-control"
-          type="number"
-          inputMode="numeric"
-          value={value}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <TextControl
-      id={id}
-      label={label}
-      icon={icon}
-      value={value}
-      suggestions={options.length > 0 ? options : undefined}
-      disabled={disabled}
-      onChange={onChange}
-    />
-  );
-}
-
 function DetailRow({
   label,
   icon,
@@ -941,48 +737,6 @@ function DetailRow({
         {icon} {label}
       </span>
       {children}
-    </div>
-  );
-}
-
-function TextControl({
-  id,
-  label,
-  icon,
-  value,
-  suggestions,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  value: string;
-  suggestions?: readonly string[] | undefined;
-  disabled: boolean;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="detail-row">
-      <label className="detail-label" htmlFor={id}>
-        {icon} {label}
-      </label>
-      <input
-        id={id}
-        className="detail-control"
-        value={value}
-        disabled={disabled}
-        spellCheck={suggestions === undefined}
-        onChange={(event) => onChange(event.target.value)}
-        {...(suggestions ? { list: `${id}-options` } : {})}
-      />
-      {suggestions && (
-        <datalist id={`${id}-options`}>
-          {suggestions.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-      )}
     </div>
   );
 }
@@ -1014,7 +768,7 @@ function CommentList({
         <div>
           <header>
             <strong>{creator}</strong>
-            <time>{displayDate(comment.creationTime)}</time>
+            <time>{formatDetailDate(comment.creationTime)}</time>
             {comment.isPrivate && <span className="private-pill">Private</span>}
           </header>
           <div className="comment-body">{comment.text}</div>
