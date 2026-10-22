@@ -342,6 +342,7 @@ export default function App() {
         loading={loadingDetail}
         error={detailError}
         detailFields={resolveDetailFields(activeProject?.detailFields)}
+        integrationUser={settings.integrationUser}
         onBack={() => {
           setSelectedBug(undefined);
           setDetailError("");

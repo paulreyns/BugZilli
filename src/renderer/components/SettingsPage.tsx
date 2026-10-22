@@ -1,4 +1,4 @@
-import { KeyRound, Plus, Save, Server, Trash2 } from "lucide-react";
+import { KeyRound, Plug, Plus, Save, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   DEFAULT_BOARD_GROUP_BY,
@@ -29,12 +29,14 @@ export function SettingsPage({
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [apiKey, setApiKey] = useState("");
   const [clearApiKey, setClearApiKey] = useState(false);
+  const [integrationUser, setIntegrationUser] = useState(settings.integrationUser);
   const [projects, setProjects] = useState<Project[]>(settings.projects);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     setBaseUrl(settings.baseUrl);
+    setIntegrationUser(settings.integrationUser);
     setProjects(settings.projects);
   }, [settings]);
 
@@ -68,6 +70,7 @@ export function SettingsPage({
       await onSave({
         baseUrl,
         projects,
+        integrationUser,
         ...(apiKey.trim() ? { apiKey } : {}),
         ...(clearApiKey ? { clearApiKey: true } : {}),
       });
@@ -162,6 +165,30 @@ export function SettingsPage({
                 key is stored locally but is not encrypted.
               </p>
             )}
+          </section>
+        )}
+
+        {!scopedToProject && (
+          <section className="settings-card">
+            <div className="settings-card-title">
+              <Plug size={19} />
+              <div>
+                <h2>Integrations</h2>
+                <p>
+                  Comments from the integration user appear in their own
+                  Integrations tab on bug details.
+                </p>
+              </div>
+            </div>
+            <label>
+              Integration user
+              <input
+                type="email"
+                value={integrationUser}
+                placeholder="integration@example.com"
+                onChange={(event) => setIntegrationUser(event.target.value)}
+              />
+            </label>
           </section>
         )}
 

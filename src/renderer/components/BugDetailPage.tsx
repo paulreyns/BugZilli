@@ -11,6 +11,7 @@ import {
   Monitor,
   Paperclip,
   Pencil,
+  Plug,
   Tag,
   Upload,
   UserRound,
@@ -33,9 +34,11 @@ import {
   readBugFieldValue,
   resolveDetailFields,
 } from "../../shared/detail-fields";
+import { splitIntegrationComments } from "../../shared/integration-comments";
 import {
   MAX_ATTACHMENT_BYTES,
   type BugAttachmentDraft,
+  type BugComment,
   type BugCommentDraft,
   type BugDetail,
   type BugUpdate,
@@ -50,6 +53,7 @@ interface BugDetailPageProps {
   loading: boolean;
   error: string;
   detailFields?: string[];
+  integrationUser?: string;
   onBack: () => void;
   onOpenAttachment: (id: number) => Promise<void>;
   onUpdateBug: (id: number, update: BugUpdate) => Promise<void>;
@@ -83,13 +87,16 @@ export function BugDetailPage({
   loading,
   error,
   detailFields,
+  integrationUser,
   onBack,
   onOpenAttachment,
   onUpdateBug,
   onAddComment,
   onAddAttachment,
 }: BugDetailPageProps) {
-  const [tab, setTab] = useState<"comments" | "attachments">("comments");
+  const [tab, setTab] = useState<"comments" | "attachments" | "integrations">(
+    "comments",
+  );
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<BugDraft | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
@@ -259,6 +266,12 @@ export function BugDetailPage({
   const shownStatus = form ? form.status : bug.status;
   const fields = resolveDetailFields(detailFields);
   const fieldKeys = form && !fields.includes("status") ? ["status", ...fields] : fields;
+  const showIntegrations = Boolean(integrationUser?.trim());
+  const { comments, integrations: integrationComments } = splitIntegrationComments(
+    bug.comments,
+    integrationUser,
+  );
+  const activeTab = tab === "integrations" && !showIntegrations ? "comments" : tab;
 
   return (
     <main className="page detail-page">
@@ -367,53 +380,50 @@ export function BugDetailPage({
               <button
                 type="button"
                 role="tab"
-                aria-selected={tab === "comments"}
-                className={tab === "comments" ? "active" : ""}
+                aria-selected={activeTab === "comments"}
+                className={activeTab === "comments" ? "active" : ""}
                 onClick={() => setTab("comments")}
               >
                 <MessageSquare size={16} />
                 Comments
-                <span>{bug.comments.length}</span>
+                <span>{comments.length}</span>
               </button>
               <button
                 type="button"
                 role="tab"
-                aria-selected={tab === "attachments"}
-                className={tab === "attachments" ? "active" : ""}
+                aria-selected={activeTab === "attachments"}
+                className={activeTab === "attachments" ? "active" : ""}
                 onClick={() => setTab("attachments")}
               >
                 <Paperclip size={16} />
                 Attachments
                 <span>{bug.attachments.length}</span>
               </button>
+              {showIntegrations && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "integrations"}
+                  className={activeTab === "integrations" ? "active" : ""}
+                  onClick={() => setTab("integrations")}
+                >
+                  <Plug size={16} />
+                  Integrations
+                  <span>{integrationComments.length}</span>
+                </button>
+              )}
             </div>
 
             <div
               className="comments"
               role="tabpanel"
-              hidden={tab !== "comments"}
+              hidden={activeTab !== "comments"}
             >
-              {bug.comments.length === 0 ? (
-                <TabEmpty icon={<MessageSquare size={28} />} text="No comments yet." />
-              ) : (
-                bug.comments.map((comment) => (
-                  <article className="comment" key={comment.id}>
-                    <span className="comment-avatar">
-                      {comment.creator.slice(0, 1).toUpperCase()}
-                    </span>
-                    <div>
-                      <header>
-                        <strong>{comment.creator}</strong>
-                        <time>{displayDate(comment.creationTime)}</time>
-                        {comment.isPrivate && (
-                          <span className="private-pill">Private</span>
-                        )}
-                      </header>
-                      <div className="comment-body">{comment.text}</div>
-                    </div>
-                  </article>
-                ))
-              )}
+              <CommentList
+                comments={comments}
+                icon={<MessageSquare size={28} />}
+                emptyText="No comments yet."
+              />
               <CommentComposer
                 key={`comment-${bug.id}`}
                 disabled={pending !== null}
@@ -429,7 +439,7 @@ export function BugDetailPage({
             <div
               className="attachments"
               role="tabpanel"
-              hidden={tab !== "attachments"}
+              hidden={activeTab !== "attachments"}
             >
               <AttachmentComposer
                 key={`attachment-${bug.id}`}
@@ -481,6 +491,19 @@ export function BugDetailPage({
                 ))
               )}
             </div>
+            {showIntegrations && (
+              <div
+                className="comments"
+                role="tabpanel"
+                hidden={activeTab !== "integrations"}
+              >
+                <CommentList
+                  comments={integrationComments}
+                  icon={<Plug size={28} />}
+                  emptyText="No integration comments."
+                />
+              </div>
+            )}
           </section>
         </div>
 
@@ -971,6 +994,33 @@ function TabEmpty({ icon, text }: { icon: ReactNode; text: string }) {
       <span>{text}</span>
     </div>
   );
+}
+
+function CommentList({
+  comments,
+  icon,
+  emptyText,
+}: {
+  comments: BugComment[];
+  icon: ReactNode;
+  emptyText: string;
+}) {
+  if (comments.length === 0) return <TabEmpty icon={icon} text={emptyText} />;
+  return comments.map((comment) => (
+    <article className="comment" key={comment.id}>
+      <span className="comment-avatar">
+        {comment.creator.slice(0, 1).toUpperCase()}
+      </span>
+      <div>
+        <header>
+          <strong>{comment.creator}</strong>
+          <time>{displayDate(comment.creationTime)}</time>
+          {comment.isPrivate && <span className="private-pill">Private</span>}
+        </header>
+        <div className="comment-body">{comment.text}</div>
+      </div>
+    </article>
+  ));
 }
 
 function CommentComposer({
