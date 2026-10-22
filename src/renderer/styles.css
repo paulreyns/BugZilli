@@ -1325,6 +1325,7 @@ select.detail-control {
 }
 
 .description-section h2,
+.linked-bugs-section h2,
 .activity-section h2,
 .detail-sidebar h2 {
   margin: 0 0 14px;
@@ -1346,6 +1347,81 @@ select.detail-control {
   border: 1px solid #ebecf0;
   border-radius: 6px;
   background: #fafbfc;
+}
+
+.linked-bugs-section {
+  margin-top: 34px;
+}
+
+.linked-bugs-section h3 {
+  margin: 18px 0 8px;
+  color: #44546f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.linked-bugs-section h2 + h3 {
+  margin-top: 0;
+}
+
+.linked-bugs-empty {
+  margin: 0;
+  color: #626f86;
+  font-size: 13px;
+}
+
+.linked-bugs-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #ebecf0;
+  border-radius: 6px;
+}
+
+.linked-bugs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.linked-bugs-table th {
+  height: 34px;
+  padding: 0 12px;
+  background: #fafbfc;
+  color: #44546f;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.linked-bugs-table td {
+  padding: 9px 12px;
+  border-top: 1px solid #ebecf0;
+  color: #44546f;
+  white-space: nowrap;
+}
+
+.linked-bugs-table td.linked-bug-id {
+  width: 1%;
+  color: #0c66e4;
+  font-weight: 600;
+}
+
+.linked-bugs-table td.linked-bug-summary {
+  width: 100%;
+  color: #172b4d;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.linked-bugs-table tbody tr {
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.linked-bugs-table tbody tr:hover,
+.linked-bugs-table tbody tr:focus {
+  outline: 0;
+  background: #f4f8ff;
 }
 
 .activity-section {
