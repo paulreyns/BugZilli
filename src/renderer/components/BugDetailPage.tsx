@@ -371,20 +371,16 @@ export function BugDetailPage({
             </div>
           </section>
 
-          <section className="linked-bugs-section">
-            <h2>Linked Bugs</h2>
-            <h3>Blocks</h3>
-            <LinkedBugTable
-              bugs={bug.blocks}
-              label="Blocks"
-              emptyText="This bug does not block any bugs."
+            <section className="linked-bugs-section">
+              <h2>Linked Bugs</h2>
+              <LinkedBugTable
+                bugs={bug.blocks}
+                label="Blocks"
               onOpenBug={onOpenBug}
             />
-            <h3>Depends On</h3>
             <LinkedBugTable
               bugs={bug.dependsOn}
               label="Depends On"
-              emptyText="This bug does not depend on any bugs."
               onOpenBug={onOpenBug}
             />
           </section>
@@ -765,48 +761,50 @@ function DetailRow({
 function LinkedBugTable({
   bugs,
   label,
-  emptyText,
   onOpenBug,
 }: {
   bugs: LinkedBug[];
   label: string;
-  emptyText: string;
   onOpenBug: (id: number) => void;
 }) {
   if (bugs.length === 0) {
-    return <p className="linked-bugs-empty">{emptyText}</p>;
+    return;
   }
   return (
-    <div className="linked-bugs-table-wrap">
-      <table className="linked-bugs-table" aria-label={label}>
-        <thead>
-          <tr>
-            <th scope="col">Id</th>
-            <th scope="col">Summary</th>
-            <th scope="col">Assignee</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bugs.map((linked) => (
-            <tr
-              key={linked.id}
-              tabIndex={0}
-              onClick={() => onOpenBug(linked.id)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onOpenBug(linked.id);
-                }
-              }}
-            >
-              <td className="linked-bug-id">{linked.id}</td>
-              <td className="linked-bug-summary">{linked.summary || "—"}</td>
-              <td>{linked.assignedToName || linked.assignedTo || "Unassigned"}</td>
+    <>
+      <h3>{label}</h3>
+      <div className="linked-bugs-table-wrap">
+        
+        <table className="linked-bugs-table" aria-label={label}>
+          <thead>
+            <tr>
+              <th scope="col">Id</th>
+              <th scope="col">Summary</th>
+              <th scope="col">Assignee</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {bugs.map((linked) => (
+              <tr
+                key={linked.id}
+                tabIndex={0}
+                onClick={() => onOpenBug(linked.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpenBug(linked.id);
+                  }
+                }}
+              >
+                <td className="linked-bug-id">{linked.id}</td>
+                <td className="linked-bug-summary">{linked.summary || "—"}</td>
+                <td>{linked.assignedToName || linked.assignedTo || "Unassigned"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
