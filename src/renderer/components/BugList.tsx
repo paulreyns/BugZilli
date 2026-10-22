@@ -23,6 +23,7 @@ import {
   type ListSortsByProduct,
 } from "../../shared/list-sort";
 import type { Bug } from "../../shared/types";
+import { formatListDate } from "../utils/date";
 import { EmptyState, initials, statusClass } from "./BugViewShared";
 
 const LIST_SORTS_KEY = "bugzilli.listSorts";
@@ -67,15 +68,6 @@ function useProductListSort(
   }
 
   return [sorts[product], setSort];
-}
-
-function displayDate(value: string): string {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
 }
 
 function isDateColumn(key: string): boolean {
@@ -125,7 +117,7 @@ function ColumnCell({ bug, column }: { bug: Bug; column: string }) {
     default: {
       const raw = readBugFieldValue(bug, column);
       if (isDateColumn(column) && typeof raw === "string") {
-        return <>{displayDate(raw)}</>;
+        return <>{formatListDate(raw)}</>;
       }
       const formatted = formatExtraFieldValue(raw).trim();
       return <>{formatted || "—"}</>;
