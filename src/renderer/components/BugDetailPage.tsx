@@ -1006,21 +1006,22 @@ function CommentList({
   emptyText: string;
 }) {
   if (comments.length === 0) return <TabEmpty icon={icon} text={emptyText} />;
-  return comments.map((comment) => (
-    <article className="comment" key={comment.id}>
-      <span className="comment-avatar">
-        {comment.creator.slice(0, 1).toUpperCase()}
-      </span>
-      <div>
-        <header>
-          <strong>{comment.creator}</strong>
-          <time>{displayDate(comment.creationTime)}</time>
-          {comment.isPrivate && <span className="private-pill">Private</span>}
-        </header>
-        <div className="comment-body">{comment.text}</div>
-      </div>
-    </article>
-  ));
+  return comments.map((comment) => {
+    const creator = comment.creatorName || comment.creator;
+    return (
+      <article className="comment" key={comment.id}>
+        <span className="comment-avatar">{creator.slice(0, 1).toUpperCase()}</span>
+        <div>
+          <header>
+            <strong>{creator}</strong>
+            <time>{displayDate(comment.creationTime)}</time>
+            {comment.isPrivate && <span className="private-pill">Private</span>}
+          </header>
+          <div className="comment-body">{comment.text}</div>
+        </div>
+      </article>
+    );
+  });
 }
 
 function CommentComposer({

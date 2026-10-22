@@ -216,7 +216,7 @@ describe("Bugzilla API client", () => {
                 },
                 {
                   id: 3,
-                  creator: "developer",
+                  creator: "qa@example.com",
                   creation_time: "2024-01-03T09:00:00Z",
                   text: "Follow-up",
                 },
@@ -238,6 +238,9 @@ describe("Bugzilla API client", () => {
             ],
           },
         }),
+      )
+      .mockResolvedValueOnce(
+        response({ users: [{ name: "developer", real_name: "Dev Name" }] }),
       );
 
     const bug = await getBug(42);
@@ -249,6 +252,11 @@ describe("Bugzilla API client", () => {
       "Follow-up",
       "Confirmed",
     ]);
+    expect(bug.comments[1]).toMatchObject({
+      creator: "developer",
+      creatorName: "Dev Name",
+    });
+    expect(bug.comments[0]?.creatorName).toBeUndefined();
     expect(bug.attachments[0]?.fileName).toBe("screenshot.png");
     const [bugUrl] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(bugUrl.pathname).toContain("/rest/bug/42");
@@ -497,10 +505,14 @@ describe("Bugzilla API client", () => {
         }),
       )
       .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+    fetchMock.mockResolvedValueOnce(
+      response({ users: [{ name: "dev", real_name: "Dev Name" }] }),
+    );
 
     const bug = await addComment(42, { text: "  Looks fixed  ", isPrivate: true });
 
     expect(bug.comments[0]?.text).toBe("Looks fixed");
+    expect(bug.comments[0]?.creatorName).toBe("Dev Name");
     const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(url.pathname).toBe("/rest/bug/42/comment");
     expect(options.method).toBe("POST");

@@ -138,6 +138,7 @@ export interface Bug {
 export interface BugComment {
   id: number;
   creator: string;
+  creatorName?: string;
   creationTime: string;
   text: string;
   isPrivate: boolean;

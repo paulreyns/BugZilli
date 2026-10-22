@@ -206,6 +206,31 @@ function mapComment(value: JsonRecord): BugComment {
   };
 }
 
+async function getCommentCreatorNames(
+  comments: BugComment[],
+): Promise<Map<string, string>> {
+  const creators = [
+    ...new Set(comments.map(({ creator }) => creator).filter(Boolean)),
+  ];
+  if (creators.length === 0) return new Map();
+
+  const params = new URLSearchParams();
+  for (const creator of creators) params.append("names", creator);
+  const payload = await request("user", { params });
+  const names = new Map<string, string>();
+  if (!Array.isArray(payload.users)) return names;
+
+  for (const value of payload.users) {
+    const user = value as JsonRecord;
+    const realName = text(user.real_name).trim();
+    if (!realName) continue;
+    for (const login of [text(user.name), text(user.email)]) {
+      if (login) names.set(login.toLowerCase(), realName);
+    }
+  }
+  return names;
+}
+
 function mapAttachment(value: JsonRecord): BugAttachment {
   return {
     id: number(value.id),
@@ -244,10 +269,17 @@ export async function getBug(id: number): Promise<BugDetail> {
   const allComments = Array.isArray(commentContainer?.comments)
     ? commentContainer.comments.map((comment) => mapComment(comment as JsonRecord))
     : [];
-  const comments = allComments.slice(1).sort(
-    (left, right) =>
-      Date.parse(right.creationTime) - Date.parse(left.creationTime),
-  );
+  const visibleComments = allComments.slice(1);
+  const creatorNames = await getCommentCreatorNames(visibleComments);
+  const comments = visibleComments
+    .map((comment) => {
+      const creatorName = creatorNames.get(comment.creator.toLowerCase());
+      return creatorName ? { ...comment, creatorName } : comment;
+    })
+    .sort(
+      (left, right) =>
+        Date.parse(right.creationTime) - Date.parse(left.creationTime),
+    );
 
   const attachmentBugs = attachmentPayload.bugs as JsonRecord | undefined;
   const attachmentValues = attachmentBugs?.[String(id)];
