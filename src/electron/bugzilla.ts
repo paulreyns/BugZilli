@@ -20,6 +20,7 @@ import {
   type BugCommentDraft,
   type BugDetail,
   type DetailFieldOption,
+  type LinkedBug,
   type BugSearch,
   type BugUpdate,
   type Project,
@@ -245,6 +246,42 @@ function mapAttachment(value: JsonRecord): BugAttachment {
   };
 }
 
+function bugIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const ids = value.map(number).filter((id) => Number.isInteger(id) && id > 0);
+  return [...new Set(ids)];
+}
+
+async function getLinkedBugs(ids: number[]): Promise<Map<number, LinkedBug>> {
+  const linked = new Map<number, LinkedBug>();
+  if (ids.length === 0) return linked;
+
+  const params = new URLSearchParams({
+    include_fields: "id,summary,assigned_to,assigned_to_detail",
+  });
+  for (const id of ids) params.append("id", String(id));
+  try {
+    const payload = await request("bug", { params });
+    if (!Array.isArray(payload.bugs)) return linked;
+    for (const value of payload.bugs) {
+      const bug = mapBug(value as JsonRecord);
+      linked.set(bug.id, {
+        id: bug.id,
+        summary: bug.summary,
+        assignedTo: bug.assignedTo,
+        ...(bug.assignedToName ? { assignedToName: bug.assignedToName } : {}),
+      });
+    }
+  } catch {
+    // Linked bug details are best-effort; the IDs are still shown.
+  }
+  return linked;
+}
+
+function linkedBugsFor(ids: number[], linked: Map<number, LinkedBug>): LinkedBug[] {
+  return ids.map((id) => linked.get(id) ?? { id, summary: "", assignedTo: "" });
+}
+
 function assertBugId(id: number): void {
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid bug number.");
 }
@@ -270,7 +307,12 @@ export async function getBug(id: number): Promise<BugDetail> {
     ? commentContainer.comments.map((comment) => mapComment(comment as JsonRecord))
     : [];
   const visibleComments = allComments.slice(1);
-  const creatorNames = await getCommentCreatorNames(visibleComments);
+  const blockIds = bugIds(bugValue.blocks);
+  const dependsOnIds = bugIds(bugValue.depends_on);
+  const [creatorNames, linkedBugs] = await Promise.all([
+    getCommentCreatorNames(visibleComments),
+    getLinkedBugs([...new Set([...blockIds, ...dependsOnIds])]),
+  ]);
   const comments = visibleComments
     .map((comment) => {
       const creatorName = creatorNames.get(comment.creator.toLowerCase());
@@ -295,6 +337,8 @@ export async function getBug(id: number): Promise<BugDetail> {
     description: allComments[0]?.text ?? "",
     comments,
     attachments,
+    blocks: linkedBugsFor(blockIds, linkedBugs),
+    dependsOn: linkedBugsFor(dependsOnIds, linkedBugs),
   };
 }
 

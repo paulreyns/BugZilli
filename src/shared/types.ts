@@ -156,9 +156,21 @@ export interface BugAttachment {
   isPrivate: boolean;
 }
 
+export interface LinkedBug {
+  id: number;
+  /** Empty when Bugzilla did not return the bug (e.g. no access). */
+  summary: string;
+  assignedTo: string;
+  assignedToName?: string;
+}
+
 export interface BugDetail extends Bug {
   comments: BugComment[];
   attachments: BugAttachment[];
+  /** Bugs listed in the Bugzilla `blocks` field. */
+  blocks: LinkedBug[];
+  /** Bugs listed in the Bugzilla `depends_on` field. */
+  dependsOn: LinkedBug[];
 }
 
 export interface BugUpdate {

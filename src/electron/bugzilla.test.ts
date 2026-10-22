@@ -291,6 +291,66 @@ describe("Bugzilla API client", () => {
     });
   });
 
+  it("resolves blocks and depends_on into linked bugs", async () => {
+    fetchMock.mockImplementation(async (url: URL) => {
+      if (url.pathname === "/rest/bug/42") {
+        return response({
+          bugs: [{ id: 42, summary: "Toolbar", blocks: [50, 51], depends_on: [7] }],
+        });
+      }
+      if (url.pathname === "/rest/bug/42/comment") {
+        return response({ bugs: { "42": { comments: [] } } });
+      }
+      if (url.pathname === "/rest/bug/42/attachment") {
+        return response({ bugs: { "42": [] } });
+      }
+      return response({
+        bugs: [
+          {
+            id: 7,
+            summary: "Layout engine",
+            assigned_to: "dev@example.com",
+            assigned_to_detail: { real_name: "Dev Name" },
+          },
+          { id: 50, summary: "Release", assigned_to: "lead@example.com" },
+        ],
+      });
+    });
+
+    const bug = await getBug(42);
+
+    expect(bug.blocks).toEqual([
+      { id: 50, summary: "Release", assignedTo: "lead@example.com" },
+      { id: 51, summary: "", assignedTo: "" },
+    ]);
+    expect(bug.dependsOn).toEqual([
+      {
+        id: 7,
+        summary: "Layout engine",
+        assignedTo: "dev@example.com",
+        assignedToName: "Dev Name",
+      },
+    ]);
+    const linkedUrl = (fetchMock.mock.calls as [URL][])
+      .map(([url]) => url)
+      .find((url) => url.pathname === "/rest/bug");
+    expect(linkedUrl?.searchParams.getAll("id")).toEqual(["50", "51", "7"]);
+    expect(linkedUrl?.searchParams.get("include_fields")).toContain("assigned_to");
+  });
+
+  it("keeps linked bug IDs when their details cannot be loaded", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ bugs: [{ id: 42, blocks: [], depends_on: [9] }] }))
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(response({ error: true, message: "denied" }, false));
+
+    const bug = await getBug(42);
+
+    expect(bug.blocks).toEqual([]);
+    expect(bug.dependsOn).toEqual([{ id: 9, summary: "", assignedTo: "" }]);
+  });
+
   it("loads detail field options from /rest/field/bug", async () => {
     fetchMock.mockResolvedValue(
       response({
