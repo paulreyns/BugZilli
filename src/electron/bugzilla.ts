@@ -19,6 +19,8 @@ import {
   type BugComment,
   type BugCommentDraft,
   type BugDetail,
+  type BugHistoryChange,
+  type BugHistoryEntry,
   type DetailFieldOption,
   type LinkedBug,
   type BugSearch,
@@ -244,6 +246,27 @@ function mapAttachment(value: JsonRecord): BugAttachment {
   };
 }
 
+function mapHistoryChange(value: JsonRecord): BugHistoryChange {
+  const attachmentId = number(value.attachment_id);
+  return {
+    fieldName: text(value.field_name),
+    removed: text(value.removed),
+    added: text(value.added),
+    ...(attachmentId > 0 ? { attachmentId } : {}),
+  };
+}
+
+function mapHistoryEntry(value: JsonRecord): BugHistoryEntry {
+  const changes = Array.isArray(value.changes)
+    ? value.changes.map((change) => mapHistoryChange(change as JsonRecord))
+    : [];
+  return {
+    when: text(value.when),
+    who: text(value.who),
+    changes,
+  };
+}
+
 function bugIds(value: unknown): number[] {
   if (!Array.isArray(value)) return [];
   const ids = value.map(number).filter((id) => Number.isInteger(id) && id > 0);
@@ -288,11 +311,13 @@ export async function getBug(id: number): Promise<BugDetail> {
   assertBugId(id);
   // Fetch all scalar fields so product-configured Details fields (including
   // custom Bugzilla fields) are available without a second round-trip.
-  const [bugPayload, commentPayload, attachmentPayload] = await Promise.all([
-    request(`bug/${id}`),
-    request(`bug/${id}/comment`),
-    request(`bug/${id}/attachment`),
-  ]);
+  const [bugPayload, commentPayload, attachmentPayload, historyPayload] =
+    await Promise.all([
+      request(`bug/${id}`),
+      request(`bug/${id}/comment`),
+      request(`bug/${id}/attachment`),
+      request(`bug/${id}/history`),
+    ]);
 
   const bugValue = Array.isArray(bugPayload.bugs)
     ? (bugPayload.bugs[0] as JsonRecord | undefined)
@@ -312,12 +337,24 @@ export async function getBug(id: number): Promise<BugDetail> {
         mapAttachment(attachment as JsonRecord),
       )
     : [];
+  const historyBugs = Array.isArray(historyPayload.bugs)
+    ? historyPayload.bugs
+    : [];
+  const historyContainer = historyBugs.find(
+    (entry) => number((entry as JsonRecord).id) === id,
+  ) as JsonRecord | undefined;
+  const mappedHistory = Array.isArray(historyContainer?.history)
+    ? historyContainer.history.map((entry) =>
+        mapHistoryEntry(entry as JsonRecord),
+      )
+    : [];
   const blockIds = bugIds(bugValue.blocks);
   const dependsOnIds = bugIds(bugValue.depends_on);
   const [creatorNames, linkedBugs] = await Promise.all([
     getCreatorNames([
       ...visibleComments.map(({ creator }) => creator),
       ...mappedAttachments.map(({ creator }) => creator),
+      ...mappedHistory.map(({ who }) => who),
     ]),
     getLinkedBugs([...new Set([...blockIds, ...dependsOnIds])]),
   ]);
@@ -336,12 +373,20 @@ export async function getBug(id: number): Promise<BugDetail> {
     return creatorName ? { ...attachment, creatorName } : attachment;
   });
 
+  const history = mappedHistory
+    .map((entry) => {
+      const whoName = creatorNames.get(entry.who.toLowerCase());
+      return whoName ? { ...entry, whoName } : entry;
+    })
+    .sort((left, right) => Date.parse(right.when) - Date.parse(left.when));
+
   const bug = mapBug(bugValue);
   return {
     ...bug,
     description: allComments[0]?.text ?? "",
     comments,
     attachments,
+    history,
     blocks: linkedBugsFor(blockIds, linkedBugs),
     dependsOn: linkedBugsFor(dependsOnIds, linkedBugs),
   };

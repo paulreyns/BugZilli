@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   Component,
+  History,
   Link,
   MessageSquare,
   Monitor,
@@ -46,6 +47,7 @@ import { formatDetailDate } from "../../utils/date";
 import { FieldControl } from "../field-controls/FieldControl";
 import { AttachmentsTab } from "./AttachmentsTab";
 import { CommentsTab } from "./CommentsTab";
+import { HistoryTab } from "./HistoryTab";
 import { IntegrationsTab } from "./IntegrationsTab";
 
 interface BugDetailPageProps {
@@ -83,9 +85,9 @@ export function BugDetailPage({
   onAddComment,
   onAddAttachment,
 }: BugDetailPageProps) {
-  const [tab, setTab] = useState<"comments" | "attachments" | "integrations">(
-    "comments",
-  );
+  const [tab, setTab] = useState<
+    "comments" | "attachments" | "history" | "integrations"
+  >("comments");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<BugDraft | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
@@ -402,6 +404,17 @@ export function BugDetailPage({
                 Attachments
                 <span>{bug.attachments.length}</span>
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "history"}
+                className={activeTab === "history" ? "active" : ""}
+                onClick={() => setTab("history")}
+              >
+                <History size={16} />
+                History
+                <span>{bug.history.length}</span>
+              </button>
               {showIntegrations && (
                 <button
                   type="button"
@@ -444,6 +457,10 @@ export function BugDetailPage({
               }
               onOpenAttachment={onOpenAttachment}
               onError={(text) => setFeedback({ tone: "error", text })}
+            />
+            <HistoryTab
+              hidden={activeTab !== "history"}
+              history={bug.history}
             />
             {showIntegrations && (
               <IntegrationsTab
