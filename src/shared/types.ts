@@ -151,6 +151,7 @@ export interface BugAttachment {
   contentType: string;
   size: number;
   creator: string;
+  creatorName?: string;
   creationTime: string;
   isObsolete: boolean;
   isPrivate: boolean;

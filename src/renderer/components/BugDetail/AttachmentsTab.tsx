@@ -6,6 +6,7 @@ import {
   type BugAttachmentDraft,
 } from "../../../shared/types";
 import { errorMessage } from "../../errors";
+import { formatDetailDate } from "../../utils/date";
 import { TabEmpty } from "./TabEmpty";
 
 export function AttachmentsTab({
@@ -57,10 +58,14 @@ export function AttachmentsTab({
               <File size={20} />
             </span>
             <span className="attachment-info">
-              <strong>{attachment.fileName}</strong>
-              <span>
+              <span className="attachment-title">
+                <strong>{attachment.fileName}</strong>
+                <span>({fileSize(attachment.size)})</span>
+              </span>
+              <span className="attachment-meta">
                 {attachment.summary || attachment.contentType} ·{" "}
-                {fileSize(attachment.size)}
+                {formatDetailDate(attachment.creationTime)} ·{" "}
+                {attachment.creatorName || attachment.creator}
               </span>
             </span>
             {attachment.isObsolete && (

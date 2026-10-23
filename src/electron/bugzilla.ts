@@ -207,16 +207,14 @@ function mapComment(value: JsonRecord): BugComment {
   };
 }
 
-async function getCommentCreatorNames(
-  comments: BugComment[],
+async function getCreatorNames(
+  creators: string[],
 ): Promise<Map<string, string>> {
-  const creators = [
-    ...new Set(comments.map(({ creator }) => creator).filter(Boolean)),
-  ];
-  if (creators.length === 0) return new Map();
+  const uniqueCreators = [...new Set(creators.filter(Boolean))];
+  if (uniqueCreators.length === 0) return new Map();
 
   const params = new URLSearchParams();
-  for (const creator of creators) params.append("names", creator);
+  for (const creator of uniqueCreators) params.append("names", creator);
   const payload = await request("user", { params });
   const names = new Map<string, string>();
   if (!Array.isArray(payload.users)) return names;
@@ -307,10 +305,20 @@ export async function getBug(id: number): Promise<BugDetail> {
     ? commentContainer.comments.map((comment) => mapComment(comment as JsonRecord))
     : [];
   const visibleComments = allComments.slice(1);
+  const attachmentBugs = attachmentPayload.bugs as JsonRecord | undefined;
+  const attachmentValues = attachmentBugs?.[String(id)];
+  const mappedAttachments = Array.isArray(attachmentValues)
+    ? attachmentValues.map((attachment) =>
+        mapAttachment(attachment as JsonRecord),
+      )
+    : [];
   const blockIds = bugIds(bugValue.blocks);
   const dependsOnIds = bugIds(bugValue.depends_on);
   const [creatorNames, linkedBugs] = await Promise.all([
-    getCommentCreatorNames(visibleComments),
+    getCreatorNames([
+      ...visibleComments.map(({ creator }) => creator),
+      ...mappedAttachments.map(({ creator }) => creator),
+    ]),
     getLinkedBugs([...new Set([...blockIds, ...dependsOnIds])]),
   ]);
   const comments = visibleComments
@@ -323,13 +331,10 @@ export async function getBug(id: number): Promise<BugDetail> {
         Date.parse(right.creationTime) - Date.parse(left.creationTime),
     );
 
-  const attachmentBugs = attachmentPayload.bugs as JsonRecord | undefined;
-  const attachmentValues = attachmentBugs?.[String(id)];
-  const attachments = Array.isArray(attachmentValues)
-    ? attachmentValues.map((attachment) =>
-        mapAttachment(attachment as JsonRecord),
-      )
-    : [];
+  const attachments = mappedAttachments.map((attachment) => {
+    const creatorName = creatorNames.get(attachment.creator.toLowerCase());
+    return creatorName ? { ...attachment, creatorName } : attachment;
+  });
 
   const bug = mapBug(bugValue);
   return {

@@ -1543,19 +1543,35 @@ select.detail-control {
   flex: 1;
 }
 
-.attachment-info strong,
-.attachment-info span {
+.attachment-info .attachment-title,
+.attachment-info .attachment-meta {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.attachment-info .attachment-title {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
 .attachment-info strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
 }
 
-.attachment-info span {
+.attachment-info .attachment-title span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.attachment-info .attachment-meta {
   margin-top: 3px;
   color: var(--muted);
   font-size: 11px;

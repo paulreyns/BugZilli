@@ -234,13 +234,24 @@ describe("Bugzilla API client", () => {
                 file_name: "screenshot.png",
                 content_type: "image/png",
                 size: 2048,
+                creator: "qa@example.com",
+                creation_time: "2024-01-04T09:00:00Z",
               },
             ],
           },
         }),
       )
       .mockResolvedValueOnce(
-        response({ users: [{ name: "developer", real_name: "Dev Name" }] }),
+        response({
+          users: [
+            { name: "developer", real_name: "Dev Name" },
+            {
+              name: "qa",
+              email: "qa@example.com",
+              real_name: "QA Name",
+            },
+          ],
+        }),
       );
 
     const bug = await getBug(42);
@@ -256,8 +267,13 @@ describe("Bugzilla API client", () => {
       creator: "developer",
       creatorName: "Dev Name",
     });
-    expect(bug.comments[0]?.creatorName).toBeUndefined();
-    expect(bug.attachments[0]?.fileName).toBe("screenshot.png");
+    expect(bug.comments[0]?.creatorName).toBe("QA Name");
+    expect(bug.attachments[0]).toMatchObject({
+      fileName: "screenshot.png",
+      creator: "qa@example.com",
+      creatorName: "QA Name",
+      creationTime: "2024-01-04T09:00:00Z",
+    });
     const [bugUrl] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(bugUrl.pathname).toContain("/rest/bug/42");
     expect(bugUrl.searchParams.has("include_fields")).toBe(false);
