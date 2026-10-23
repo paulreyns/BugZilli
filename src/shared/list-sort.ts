@@ -1,5 +1,8 @@
-import { formatExtraFieldValue, readBugFieldValue } from "./detail-fields.js";
-import { listColumnDefinition } from "./list-columns.js";
+import {
+  detailFieldDefinition,
+  formatExtraFieldValue,
+  readBugFieldValue,
+} from "./detail-fields.js";
 import type { Bug } from "./types.js";
 
 export type SortDirection = "asc" | "desc";
@@ -18,7 +21,7 @@ const collator = new Intl.Collator(undefined, {
 });
 
 function isDateColumn(column: string): boolean {
-  return listColumnDefinition(column).format === "date" || column === "deadline";
+  return detailFieldDefinition(column).format === "date" || column === "deadline";
 }
 
 function sortValue(bug: Bug, column: string): string | number | null {

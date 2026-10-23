@@ -8,13 +8,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  detailFieldDefinition,
   formatExtraFieldValue,
   readBugFieldValue,
 } from "../../shared/detail-fields";
-import {
-  listColumnDefinition,
-  resolveListColumns,
-} from "../../shared/list-columns";
+import { resolveListColumns } from "../../shared/list-columns";
 import {
   nextSort,
   parseListSorts,
@@ -72,7 +70,7 @@ function useProductListSort(
 
 function isDateColumn(key: string): boolean {
   return (
-    listColumnDefinition(key).format === "date" ||
+    detailFieldDefinition(key).format === "date" ||
     key === "creationTime" ||
     key === "lastChangeTime" ||
     key === "deadline"
@@ -168,7 +166,7 @@ export function BugList({
                     className={`sort-button${direction ? " sorted" : ""}`}
                     onClick={() => setSort(nextSort(sort, column))}
                   >
-                    {listColumnDefinition(column).label}
+                    {detailFieldDefinition(column).label}
                     <SortIcon size={12} aria-hidden="true" />
                   </button>
                 </th>

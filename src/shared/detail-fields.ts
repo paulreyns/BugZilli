@@ -107,6 +107,16 @@ export interface DetailFieldDefinition {
 
 const KNOWN_FIELDS: DetailFieldDefinition[] = [
   {
+    key: "id",
+    label: "Key",
+    bugzilla: "id",
+  },
+  {
+    key: "summary",
+    label: "Summary",
+    bugzilla: "summary",
+  },
+  {
     key: "status",
     label: "Status",
     bugzilla: "status",
@@ -221,23 +231,13 @@ const KNOWN_FIELDS: DetailFieldDefinition[] = [
   },
 ];
 
-/** Fields that can be filtered on but are not offered in the Details picker. */
-const SEARCH_ONLY_FIELDS: DetailFieldDefinition[] = [
-  { key: "id", label: "ID", bugzilla: "id" },
-  { key: "summary", label: "Summary", bugzilla: "summary" },
-];
-
-const knownByKey = new Map(
-  [...KNOWN_FIELDS, ...SEARCH_ONLY_FIELDS].map((field) => [field.key, field]),
-);
+const knownByKey = new Map(KNOWN_FIELDS.map((field) => [field.key, field]));
 const knownByBugzilla = new Map(
   KNOWN_FIELDS.map((field) => [field.bugzilla ?? field.key, field]),
 );
 
 /** Bugzilla / internal fields that should not appear in the Details picker. */
 const EXCLUDED_BUGZILLA_FIELDS = new Set([
-  "id",
-  "summary",
   "product",
   "description",
   "is_open",
@@ -445,14 +445,14 @@ function valuesForProduct(
 }
 
 function orderCatalogKeys(keys: string[]): string[] {
-  const preferred = defaultDetailFields();
-  const preferredSet = new Set(preferred);
+  const leading = ["id", "summary", "status", ...defaultDetailFields()];
+  const leadingSet = new Set(leading);
   const rest = keys
-    .filter((key) => !preferredSet.has(key) && key !== "status")
+    .filter((key) => !leadingSet.has(key))
     .sort((a, b) =>
       detailFieldDefinition(a).label.localeCompare(detailFieldDefinition(b).label),
     );
-  const ordered = ["status", ...preferred, ...rest];
+  const ordered = [...leading, ...rest];
   const keySet = new Set(keys);
   return ordered.filter((key) => keySet.has(key));
 }
@@ -478,7 +478,7 @@ export function catalogFromFieldApi(
     if (!fieldVisibleForProduct(field, trimmedProduct)) continue;
 
     const key = keyForBugzillaField(name);
-    // Chart / field-API aliases (e.g. short_desc → summary) must still be excluded.
+    // Chart / field-API aliases of excluded fields must still be excluded.
     if (
       EXCLUDED_BUGZILLA_FIELDS.has(key) ||
       EXCLUDED_BUGZILLA_FIELDS.has(bugzillaNameForKey(key))

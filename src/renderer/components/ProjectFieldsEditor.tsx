@@ -12,8 +12,6 @@ export interface ProjectFieldsEditorProps {
   resolveFields: (fields: string[] | undefined) => string[];
   defaultFields: () => string[];
   fieldLabel: (key: string) => string;
-  /** Transform the catalog returned by the product field loader. */
-  augmentCatalog?: (options: DetailFieldOption[]) => DetailFieldOption[];
 }
 
 export function ProjectFieldsEditor({
@@ -25,7 +23,6 @@ export function ProjectFieldsEditor({
   resolveFields,
   defaultFields,
   fieldLabel,
-  augmentCatalog,
 }: ProjectFieldsEditorProps) {
   const selected = resolveFields(fields);
   const [catalog, setCatalog] = useState<DetailFieldOption[] | null>(null);
@@ -46,9 +43,8 @@ export function ProjectFieldsEditor({
     setMessage("");
     try {
       const options = await window.bugzilli.getProductDetailFields(product.trim());
-      const catalog = augmentCatalog ? augmentCatalog(options) : options;
-      setCatalog(catalog);
-      setMessage(`Loaded ${catalog.length} fields from Bugzilla.`);
+      setCatalog(options);
+      setMessage(`Loaded ${options.length} fields from Bugzilla.`);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {

@@ -27,26 +27,12 @@ interface AddFilterDialogProps {
   onClose: () => void;
 }
 
-/** Fields the product field catalog omits but that are always searchable. */
-const SEARCH_ONLY_FIELD_KEYS = ["id", "summary"];
-
-function fieldOption(key: string): DetailFieldOption {
-  return { key, label: detailFieldDefinition(key).label };
-}
-
 function defaultFieldOptions(): DetailFieldOption[] {
-  return ["status", ...SEARCH_ONLY_FIELD_KEYS, ...DEFAULT_DETAIL_FIELDS].map(
-    fieldOption,
-  );
-}
-
-function includeSearchOnlyFields(
-  options: DetailFieldOption[],
-): DetailFieldOption[] {
-  const missing = SEARCH_ONLY_FIELD_KEYS.filter(
-    (key) => !options.some((option) => option.key === key),
-  );
-  return [...options, ...missing.map(fieldOption)];
+  const keys = ["id", "summary", "status", ...DEFAULT_DETAIL_FIELDS];
+  return keys.map((key) => ({
+    key,
+    label: detailFieldDefinition(key).label,
+  }));
 }
 
 function emptyRule(): FilterRule {
@@ -95,9 +81,7 @@ export function AddFilterDialog({
       .then((options) => {
         if (!active) return;
         setFields(
-          options.length > 0
-            ? includeSearchOnlyFields(options)
-            : defaultFieldOptions(),
+          options.length > 0 ? options : defaultFieldOptions(),
         );
       })
       .catch((error: unknown) => {
