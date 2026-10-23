@@ -249,7 +249,7 @@ describe("detail fields", () => {
     expect(byKey.get("summary")?.label).toBe("Summary");
     expect(byKey.has("depends_on")).toBe(false);
     expect(byKey.has("bug_status")).toBe(false);
-    expect(byKey.get("id")?.label).toBe("Key");
+    expect(byKey.get("id")?.label).toBe("Id");
     expect(byKey.has("bug_id")).toBe(false);
     expect(byKey.get("assignedTo")?.label).toBe("Assignee");
     expect(byKey.get("status")).toMatchObject({

@@ -108,7 +108,7 @@ export interface DetailFieldDefinition {
 const KNOWN_FIELDS: DetailFieldDefinition[] = [
   {
     key: "id",
-    label: "Key",
+    label: "Id",
     bugzilla: "id",
   },
   {

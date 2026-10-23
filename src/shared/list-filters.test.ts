@@ -137,7 +137,7 @@ describe("list-filters", () => {
     expect(params.get("o1")).toBe("anyexact");
     expect(params.get("v1")).toBe("123,456");
     expect(summarizeRules([{ field: "id", value: "123" }])).toBe(
-      "Key equals 123",
+      "Id equals 123",
     );
   });
 
