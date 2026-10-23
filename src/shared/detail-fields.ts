@@ -221,7 +221,15 @@ const KNOWN_FIELDS: DetailFieldDefinition[] = [
   },
 ];
 
-const knownByKey = new Map(KNOWN_FIELDS.map((field) => [field.key, field]));
+/** Fields that can be filtered on but are not offered in the Details picker. */
+const SEARCH_ONLY_FIELDS: DetailFieldDefinition[] = [
+  { key: "id", label: "ID", bugzilla: "id" },
+  { key: "summary", label: "Summary", bugzilla: "summary" },
+];
+
+const knownByKey = new Map(
+  [...KNOWN_FIELDS, ...SEARCH_ONLY_FIELDS].map((field) => [field.key, field]),
+);
 const knownByBugzilla = new Map(
   KNOWN_FIELDS.map((field) => [field.bugzilla ?? field.key, field]),
 );
@@ -295,6 +303,7 @@ export function bugzillaNameForKey(key: string): string {
  * REST `include_fields` / simple search parameter names.
  */
 const CHART_FIELD_BY_BUGZILLA: Record<string, string> = {
+  id: "bug_id",
   status: "bug_status",
   summary: "short_desc",
   creator: "reporter",

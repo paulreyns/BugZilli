@@ -128,6 +128,19 @@ describe("list-filters", () => {
     expect(params.has("v4")).toBe(false);
   });
 
+  it("maps ID filters to Bugzilla's bug_id search field", () => {
+    const params = new URLSearchParams();
+    appendFilterParams(params, [
+      { field: "id", operator: "anyexact", value: "123,456" },
+    ]);
+    expect(params.get("f1")).toBe("bug_id");
+    expect(params.get("o1")).toBe("anyexact");
+    expect(params.get("v1")).toBe("123,456");
+    expect(summarizeRules([{ field: "id", value: "123" }])).toBe(
+      "ID equals 123",
+    );
+  });
+
   it("normalizes operators and detects open-only resolution rules", () => {
     expect(normalizeFilterOperator(undefined)).toBe("equals");
     expect(normalizeFilterOperator("allwords")).toBe("allwords");
