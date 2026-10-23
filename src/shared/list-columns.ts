@@ -15,7 +15,7 @@ export const DEFAULT_LIST_COLUMNS = [
 ] as const;
 
 const LIST_ONLY_FIELDS: DetailFieldDefinition[] = [
-  { key: "id", label: "Key", bugzilla: "id" },
+  { key: "id", label: "Id", bugzilla: "id" },
   { key: "summary", label: "Summary", bugzilla: "summary" },
 ];
 
