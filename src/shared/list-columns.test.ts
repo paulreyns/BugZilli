@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  catalogForListColumns,
-  defaultListColumns,
-  listColumnDefinition,
-  resolveListColumns,
-} from "./list-columns.js";
+import { defaultListColumns, resolveListColumns } from "./list-columns.js";
 
 describe("list columns", () => {
   it("uses the current Issues table as the default", () => {
@@ -33,36 +28,5 @@ describe("list columns", () => {
         "  whiteboard  ",
       ]),
     ).toEqual(["status", "priority", "whiteboard"]);
-  });
-
-  it("labels list-only and known fields", () => {
-    expect(listColumnDefinition("id").label).toBe("Key");
-    expect(listColumnDefinition("summary").label).toBe("Summary");
-    expect(listColumnDefinition("assignedTo").label).toBe("Assignee");
-    expect(listColumnDefinition("cf_crash_signature").label).toBe(
-      "Crash Signature",
-    );
-  });
-
-  it("prepends Key and Summary when loading a product catalog", () => {
-    const catalog = catalogForListColumns([
-      { key: "assignedTo", label: "Assignee" },
-      { key: "whiteboard", label: "Whiteboard" },
-    ]);
-    expect(catalog.map(({ key }) => key)).toEqual([
-      "id",
-      "summary",
-      "assignedTo",
-      "whiteboard",
-    ]);
-  });
-
-  it("does not duplicate Key or Summary if already present", () => {
-    const catalog = catalogForListColumns([
-      { key: "id", label: "Key" },
-      { key: "summary", label: "Summary" },
-      { key: "status", label: "Status" },
-    ]);
-    expect(catalog.map(({ key }) => key)).toEqual(["id", "summary", "status"]);
   });
 });

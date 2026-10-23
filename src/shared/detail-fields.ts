@@ -107,6 +107,16 @@ export interface DetailFieldDefinition {
 
 const KNOWN_FIELDS: DetailFieldDefinition[] = [
   {
+    key: "id",
+    label: "Id",
+    bugzilla: "id",
+  },
+  {
+    key: "summary",
+    label: "Summary",
+    bugzilla: "summary",
+  },
+  {
     key: "status",
     label: "Status",
     bugzilla: "status",
@@ -228,8 +238,6 @@ const knownByBugzilla = new Map(
 
 /** Bugzilla / internal fields that should not appear in the Details picker. */
 const EXCLUDED_BUGZILLA_FIELDS = new Set([
-  "id",
-  "summary",
   "product",
   "description",
   "is_open",
@@ -295,6 +303,7 @@ export function bugzillaNameForKey(key: string): string {
  * REST `include_fields` / simple search parameter names.
  */
 const CHART_FIELD_BY_BUGZILLA: Record<string, string> = {
+  id: "bug_id",
   status: "bug_status",
   summary: "short_desc",
   creator: "reporter",
@@ -436,14 +445,14 @@ function valuesForProduct(
 }
 
 function orderCatalogKeys(keys: string[]): string[] {
-  const preferred = defaultDetailFields();
-  const preferredSet = new Set(preferred);
+  const leading = ["id", "summary", "status", ...defaultDetailFields()];
+  const leadingSet = new Set(leading);
   const rest = keys
-    .filter((key) => !preferredSet.has(key) && key !== "status")
+    .filter((key) => !leadingSet.has(key))
     .sort((a, b) =>
       detailFieldDefinition(a).label.localeCompare(detailFieldDefinition(b).label),
     );
-  const ordered = ["status", ...preferred, ...rest];
+  const ordered = [...leading, ...rest];
   const keySet = new Set(keys);
   return ordered.filter((key) => keySet.has(key));
 }
@@ -469,7 +478,7 @@ export function catalogFromFieldApi(
     if (!fieldVisibleForProduct(field, trimmedProduct)) continue;
 
     const key = keyForBugzillaField(name);
-    // Chart / field-API aliases (e.g. short_desc → summary) must still be excluded.
+    // Chart / field-API aliases of excluded fields must still be excluded.
     if (
       EXCLUDED_BUGZILLA_FIELDS.has(key) ||
       EXCLUDED_BUGZILLA_FIELDS.has(bugzillaNameForKey(key))

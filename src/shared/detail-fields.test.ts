@@ -106,8 +106,7 @@ describe("detail fields", () => {
     expect(keys).toContain("assignedTo");
     expect(keys).toContain("whiteboard");
     expect(keys).toContain("cf_blocking");
-    expect(keys).not.toContain("id");
-    expect(keys).not.toContain("summary");
+    expect(keys.slice(0, 3)).toEqual(["id", "summary", "status"]);
     expect(keys).not.toContain("depends_on");
     expect(keys.indexOf("assignedTo")).toBeLessThan(keys.indexOf("whiteboard"));
   });
@@ -233,6 +232,11 @@ describe("detail fields", () => {
           ],
         },
         {
+          name: "bug_id",
+          display_name: "Bug #",
+          type: 0,
+        },
+        {
           name: "depends_on",
           display_name: "Depends On",
           type: 6,
@@ -242,9 +246,11 @@ describe("detail fields", () => {
     );
 
     const byKey = new Map(catalog.map((option) => [option.key, option]));
-    expect(byKey.has("summary")).toBe(false);
+    expect(byKey.get("summary")?.label).toBe("Summary");
     expect(byKey.has("depends_on")).toBe(false);
     expect(byKey.has("bug_status")).toBe(false);
+    expect(byKey.get("id")?.label).toBe("Id");
+    expect(byKey.has("bug_id")).toBe(false);
     expect(byKey.get("assignedTo")?.label).toBe("Assignee");
     expect(byKey.get("status")).toMatchObject({
       label: "Status",

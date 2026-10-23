@@ -1,7 +1,6 @@
+import { detailFieldDefinition } from "../../shared/detail-fields";
 import {
-  catalogForListColumns,
   defaultListColumns,
-  listColumnDefinition,
   resolveListColumns,
 } from "../../shared/list-columns";
 import { ProjectFieldsEditor } from "./ProjectFieldsEditor";
@@ -26,8 +25,7 @@ export function ListColumnsEditor({
       onChange={onChange}
       resolveFields={resolveListColumns}
       defaultFields={defaultListColumns}
-      fieldLabel={(key) => listColumnDefinition(key).label}
-      augmentCatalog={catalogForListColumns}
+      fieldLabel={(key) => detailFieldDefinition(key).label}
     />
   );
 }

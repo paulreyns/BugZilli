@@ -409,7 +409,7 @@ describe("Bugzilla API client", () => {
       type: "select",
       values: ["yes", "no"],
     });
-    expect(byKey.has("summary")).toBe(false);
+    expect(byKey.get("summary")?.label).toBe("Summary");
 
     const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(url.pathname).toBe("/rest/field/bug");
