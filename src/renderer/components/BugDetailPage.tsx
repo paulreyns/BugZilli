@@ -26,6 +26,7 @@ import {
   validateBugDraft,
   type BugDraft,
 } from "../../shared/bug-update";
+import { bugUrl } from "../../shared/bugId";
 import {
   detailFieldDefinition,
   formatExtraFieldValue,
@@ -196,7 +197,7 @@ export function BugDetailPage({
     if (!bug) return;
     try {
       await window.bugzilli.writeClipboardText(
-        `${baseUrl}/show_bug.cgi?id=${bug.id}`,
+        bugUrl(baseUrl, bug.id),
       );
       setFeedback({ tone: "success", text: "Bugzilla link copied to clipboard." });
     } catch (caught) {

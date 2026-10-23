@@ -419,6 +419,7 @@ export default function App() {
       <div className="content">{content}</div>
       {goToBugOpen && (
         <GoToBugDialog
+          baseUrl={settings.baseUrl}
           onClose={() => setGoToBugOpen(false)}
           onGo={(id) => {
             setGoToBugOpen(false);

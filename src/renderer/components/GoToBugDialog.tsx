@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { parseBugId } from "../../shared/bugId";
 
 interface GoToBugDialogProps {
+  baseUrl: string;
   onGo: (id: number) => void;
   onClose: () => void;
 }
 
-export function GoToBugDialog({ onGo, onClose }: GoToBugDialogProps) {
+export function GoToBugDialog({ baseUrl, onGo, onClose }: GoToBugDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const editedRef = useRef(false);
@@ -23,7 +24,7 @@ export function GoToBugDialog({ onGo, onClose }: GoToBugDialogProps) {
     window.bugzilli
       .readClipboardText()
       .then((text) => {
-        const id = parseBugId(text);
+        const id = parseBugId(text, baseUrl);
         if (!active || editedRef.current || id === undefined) return;
         setValue(String(id));
         requestAnimationFrame(() => inputRef.current?.select());
