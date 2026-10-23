@@ -4,8 +4,6 @@ import {
   CalendarDays,
   Check,
   Component,
-  Download,
-  File,
   Link,
   MessageSquare,
   Monitor,
@@ -13,10 +11,9 @@ import {
   Pencil,
   Plug,
   Tag,
-  Upload,
   UserRound,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   buildBugUpdate,
   draftFromBug,
@@ -25,30 +22,31 @@ import {
   isOpenStatus,
   validateBugDraft,
   type BugDraft,
-} from "../../shared/bug-update";
-import { bugUrl } from "../../shared/bugId";
+} from "../../../shared/bug-update";
+import { bugUrl } from "../../../shared/bugId";
 import {
   detailFieldDefinition,
   formatExtraFieldValue,
   isExtraDetailField,
   readBugFieldValue,
   resolveDetailFields,
-} from "../../shared/detail-fields";
-import { splitIntegrationComments } from "../../shared/integration-comments";
+} from "../../../shared/detail-fields";
+import { splitIntegrationComments } from "../../../shared/integration-comments";
 import {
-  MAX_ATTACHMENT_BYTES,
   type BugAttachmentDraft,
-  type BugComment,
   type BugCommentDraft,
   type BugDetail,
   type BugUpdate,
   type DetailFieldOption,
   type DetailFieldType,
   type LinkedBug,
-} from "../../shared/types";
-import { errorMessage } from "../errors";
-import { formatDetailDate } from "../utils/date";
-import { FieldControl } from "./field-controls/FieldControl";
+} from "../../../shared/types";
+import { errorMessage } from "../../errors";
+import { formatDetailDate } from "../../utils/date";
+import { FieldControl } from "../field-controls/FieldControl";
+import { AttachmentsTab } from "./AttachmentsTab";
+import { CommentsTab } from "./CommentsTab";
+import { IntegrationsTab } from "./IntegrationsTab";
 
 interface BugDetailPageProps {
   bug?: BugDetail;
@@ -66,12 +64,6 @@ interface BugDetailPageProps {
 }
 
 type PendingAction = "save" | "comment" | "attachment";
-
-function fileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-}
 
 function resolutionLabel(value: string): string {
   return value && value !== "---" ? value : "";
@@ -372,11 +364,11 @@ export function BugDetailPage({
             </div>
           </section>
 
-            <section className="linked-bugs-section">
-              <h2>Linked Bugs</h2>
-              <LinkedBugTable
-                bugs={bug.blocks}
-                label="Blocks"
+          <section className="linked-bugs-section">
+            <h2>Linked Bugs</h2>
+            <LinkedBugTable
+              bugs={bug.blocks}
+              label="Blocks"
               onOpenBug={onOpenBug}
             />
             <LinkedBugTable
@@ -425,95 +417,39 @@ export function BugDetailPage({
               )}
             </div>
 
-            <div
-              className="comments"
-              role="tabpanel"
+            <CommentsTab
               hidden={activeTab !== "comments"}
-            >
-              <CommentList
-                comments={comments}
-                icon={<MessageSquare size={28} />}
-                emptyText="No comments yet."
-              />
-              <CommentComposer
-                key={`comment-${bug.id}`}
-                disabled={pending !== null}
-                pending={pending === "comment"}
-                onSubmit={(comment) =>
-                  run("comment", async () => {
-                    await onAddComment(bug.id, comment);
-                    return "Comment added.";
-                  })
-                }
-              />
-            </div>
-            <div
-              className="attachments"
-              role="tabpanel"
+              bugId={bug.id}
+              comments={comments}
+              disabled={pending !== null}
+              pending={pending === "comment"}
+              onSubmit={(comment) =>
+                run("comment", async () => {
+                  await onAddComment(bug.id, comment);
+                  return "Comment added.";
+                })
+              }
+            />
+            <AttachmentsTab
               hidden={activeTab !== "attachments"}
-            >
-              <AttachmentComposer
-                key={`attachment-${bug.id}`}
-                disabled={pending !== null}
-                pending={pending === "attachment"}
-                onSubmit={(attachment) =>
-                  run("attachment", async () => {
-                    await onAddAttachment(bug.id, attachment);
-                    return "Attachment uploaded.";
-                  })
-                }
-              />
-              {bug.attachments.length === 0 ? (
-                <TabEmpty icon={<Paperclip size={28} />} text="No attachments." />
-              ) : (
-                bug.attachments.map((attachment) => (
-                  <button
-                    type="button"
-                    className="attachment"
-                    key={attachment.id}
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          await onOpenAttachment(attachment.id);
-                        } catch (caught) {
-                          setFeedback({
-                            tone: "error",
-                            text: errorMessage(caught),
-                          });
-                        }
-                      })();
-                    }}
-                  >
-                    <span className="file-icon">
-                      <File size={20} />
-                    </span>
-                    <span className="attachment-info">
-                      <strong>{attachment.fileName}</strong>
-                      <span>
-                        {attachment.summary || attachment.contentType} ·{" "}
-                        {fileSize(attachment.size)}
-                      </span>
-                    </span>
-                    {attachment.isObsolete && (
-                      <span className="obsolete-pill">Obsolete</span>
-                    )}
-                    <Download size={17} />
-                  </button>
-                ))
-              )}
-            </div>
+              bugId={bug.id}
+              attachments={bug.attachments}
+              disabled={pending !== null}
+              pending={pending === "attachment"}
+              onSubmit={(attachment) =>
+                run("attachment", async () => {
+                  await onAddAttachment(bug.id, attachment);
+                  return "Attachment uploaded.";
+                })
+              }
+              onOpenAttachment={onOpenAttachment}
+              onError={(text) => setFeedback({ tone: "error", text })}
+            />
             {showIntegrations && (
-              <div
-                className="comments"
-                role="tabpanel"
+              <IntegrationsTab
                 hidden={activeTab !== "integrations"}
-              >
-                <CommentList
-                  comments={integrationComments}
-                  icon={<Plug size={28} />}
-                  emptyText="No integration comments."
-                />
-              </div>
+                comments={integrationComments}
+              />
             )}
           </section>
         </div>
@@ -775,7 +711,6 @@ function LinkedBugTable({
     <>
       <h3>{label}</h3>
       <div className="linked-bugs-table-wrap">
-        
         <table className="linked-bugs-table" aria-label={label}>
           <thead>
             <tr>
@@ -807,267 +742,4 @@ function LinkedBugTable({
       </div>
     </>
   );
-}
-
-function TabEmpty({ icon, text }: { icon: ReactNode; text: string }) {
-  return (
-    <div className="tab-empty">
-      {icon}
-      <span>{text}</span>
-    </div>
-  );
-}
-
-function CommentList({
-  comments,
-  icon,
-  emptyText,
-}: {
-  comments: BugComment[];
-  icon: ReactNode;
-  emptyText: string;
-}) {
-  if (comments.length === 0) return <TabEmpty icon={icon} text={emptyText} />;
-  return comments.map((comment) => {
-    const creator = comment.creatorName || comment.creator;
-    return (
-      <article className="comment" key={comment.id}>
-        <span className="comment-avatar">{creator.slice(0, 1).toUpperCase()}</span>
-        <div>
-          <header>
-            <strong>{creator}</strong>
-            <time>{formatDetailDate(comment.creationTime)}</time>
-            {comment.isPrivate && <span className="private-pill">Private</span>}
-          </header>
-          <div className="comment-body">{renderCommentText(comment.text)}</div>
-        </div>
-      </article>
-    );
-  });
-}
-
-function renderCommentText(text: string): ReactNode {
-  const urlPattern = /https?:\/\/[^\s<>"']+/gi;
-  const parts: ReactNode[] = [];
-  let lastIndex = 0;
-
-  for (const match of text.matchAll(urlPattern)) {
-    const fullMatch = match[0];
-    const trailingPunctuation = fullMatch.match(/[.,!?;:)\]}]+$/)?.[0] ?? "";
-    const url = fullMatch.slice(0, fullMatch.length - trailingPunctuation.length);
-    const startIndex = match.index ?? 0;
-
-    if (url.length === 0) continue;
-
-    parts.push(text.slice(lastIndex, startIndex));
-    parts.push(
-      <a href={url} key={startIndex} rel="noreferrer" target="_blank">
-        {url}
-      </a>,
-    );
-    parts.push(trailingPunctuation);
-    lastIndex = startIndex + fullMatch.length;
-  }
-
-  parts.push(text.slice(lastIndex));
-  return <>{parts}</>;
-}
-
-function CommentComposer({
-  disabled,
-  pending,
-  onSubmit,
-}: {
-  disabled: boolean;
-  pending: boolean;
-  onSubmit: (comment: BugCommentDraft) => Promise<void>;
-}) {
-  const [text, setText] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
-
-  async function submit(event?: FormEvent) {
-    event?.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed || disabled) return;
-    try {
-      await onSubmit({
-        text: trimmed,
-        ...(isPrivate ? { isPrivate: true } : {}),
-      });
-      setText("");
-      setIsPrivate(false);
-    } catch {
-      // The page banner shows the failure.
-    }
-  }
-
-  return (
-    <form className="composer" onSubmit={(event) => void submit(event)}>
-      <label htmlFor="bug-comment">Add a comment</label>
-      <textarea
-        id="bug-comment"
-        value={text}
-        placeholder="Write a comment…"
-        rows={4}
-        disabled={disabled}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault();
-            void submit();
-          }
-        }}
-      />
-      <div className="composer-actions">
-        <label className="check-inline">
-          <input
-            type="checkbox"
-            checked={isPrivate}
-            disabled={disabled}
-            onChange={(event) => setIsPrivate(event.target.checked)}
-          />
-          Private
-        </label>
-        <button
-          type="submit"
-          className="primary-button"
-          disabled={disabled || !text.trim()}
-        >
-          {pending ? "Adding…" : "Add comment"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function AttachmentComposer({
-  disabled,
-  pending,
-  onSubmit,
-}: {
-  disabled: boolean;
-  pending: boolean;
-  onSubmit: (attachment: BugAttachmentDraft) => Promise<void>;
-}) {
-  const [file, setFile] = useState<File | null>(null);
-  const [summary, setSummary] = useState("");
-  const [comment, setComment] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [localError, setLocalError] = useState("");
-  const [inputKey, setInputKey] = useState(0);
-  const previousName = useRef("");
-
-  function chooseFile(next: File | undefined) {
-    const selected = next ?? null;
-    setFile(selected);
-    if (!selected) return;
-    setLocalError(
-      selected.size > MAX_ATTACHMENT_BYTES
-        ? "Attachments must be 10 MB or smaller."
-        : "",
-    );
-    setSummary((current) =>
-      !current.trim() || current === previousName.current ? selected.name : current,
-    );
-    previousName.current = selected.name;
-  }
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (disabled || (file && localError)) return;
-    if (!file) {
-      setLocalError("Choose a file to upload.");
-      return;
-    }
-    try {
-      const data = await readFileAsBase64(file);
-      await onSubmit({
-        fileName: file.name,
-        contentType: file.type || "application/octet-stream",
-        data,
-        summary: summary.trim() || file.name,
-        ...(comment.trim() ? { comment: comment.trim() } : {}),
-        ...(isPrivate ? { isPrivate: true } : {}),
-      });
-      setFile(null);
-      setSummary("");
-      setComment("");
-      setIsPrivate(false);
-      setLocalError("");
-      previousName.current = "";
-      setInputKey((key) => key + 1);
-    } catch {
-      // The page banner shows the failure.
-    }
-  }
-
-  return (
-    <form className="composer" onSubmit={(event) => void submit(event)}>
-      <label className="file-field">
-        <Upload size={16} />
-        <span>{file ? `${file.name} · ${fileSize(file.size)}` : "Choose a file"}</span>
-        <input
-          key={inputKey}
-          type="file"
-          aria-label="Attachment file"
-          disabled={disabled}
-          onChange={(event) => chooseFile(event.target.files?.[0])}
-        />
-      </label>
-      <p className="field-hint">Files up to 10 MB.</p>
-      {localError && <p className="composer-error">{localError}</p>}
-      <label htmlFor="attachment-summary">Summary</label>
-      <input
-        id="attachment-summary"
-        type="text"
-        value={summary}
-        placeholder="Short description"
-        disabled={disabled}
-        onChange={(event) => setSummary(event.target.value)}
-      />
-      <label htmlFor="attachment-comment">Comment</label>
-      <textarea
-        id="attachment-comment"
-        value={comment}
-        placeholder="Optional comment"
-        rows={3}
-        disabled={disabled}
-        onChange={(event) => setComment(event.target.value)}
-      />
-      <div className="composer-actions">
-        <label className="check-inline">
-          <input
-            type="checkbox"
-            checked={isPrivate}
-            disabled={disabled}
-            onChange={(event) => setIsPrivate(event.target.checked)}
-          />
-          Private
-        </label>
-        <button
-          type="submit"
-          className="primary-button"
-          disabled={disabled || Boolean(file && localError)}
-        >
-          {pending ? "Uploading…" : "Upload"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      const marker = "base64,";
-      const index = result.indexOf(marker);
-      resolve(index >= 0 ? result.slice(index + marker.length) : result);
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read the attachment."));
-    };
-    reader.readAsDataURL(file);
-  });
 }

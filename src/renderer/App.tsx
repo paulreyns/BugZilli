@@ -18,7 +18,7 @@ import type {
   SavedFilter,
   SettingsUpdate,
 } from "../shared/types";
-import { BugDetailPage } from "./components/BugDetailPage";
+import { BugDetailPage } from "./components/BugDetail/BugDetailPage";
 import { BugsPage } from "./components/BugsPage";
 import { GoToBugDialog } from "./components/GoToBugDialog";
 import { SettingsPage } from "./components/SettingsPage";
