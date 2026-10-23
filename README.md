@@ -13,7 +13,7 @@ the only source of data.
 - View the description near the top of each bug
 - Press `Ctrl+G` to jump straight to a bug by ID (pre-filled from a numeric
   clipboard value)
-- Browse comments and attachments in separate tabs
+- Browse comments, attachments, and change history in separate tabs
 - Download attachments through Electron's save dialog
 
 The API key is encrypted with Electron `safeStorage` when the operating system
@@ -51,6 +51,7 @@ Bugzilli uses the standard Bugzilla REST endpoints:
 - `GET /rest/bug/:id` for bug details
 - `GET /rest/bug/:id/comment` for the description and comments
 - `GET /rest/bug/:id/attachment` for attachment metadata
+- `GET /rest/bug/:id/history` for field-change history
 
 Requests with a configured key send it through the `X-BUGZILLA-API-KEY`
 header. Instances that allow anonymous reads can be used without a key.

@@ -157,6 +157,23 @@ export interface BugAttachment {
   isPrivate: boolean;
 }
 
+/** One field change within a Bugzilla history event. */
+export interface BugHistoryChange {
+  fieldName: string;
+  removed: string;
+  added: string;
+  /** Present when the change was to an attachment. */
+  attachmentId?: number;
+}
+
+/** One activity event from `GET /rest/bug/:id/history`. */
+export interface BugHistoryEntry {
+  when: string;
+  who: string;
+  whoName?: string;
+  changes: BugHistoryChange[];
+}
+
 export interface LinkedBug {
   id: number;
   /** Empty when Bugzilla did not return the bug (e.g. no access). */
@@ -168,6 +185,8 @@ export interface LinkedBug {
 export interface BugDetail extends Bug {
   comments: BugComment[];
   attachments: BugAttachment[];
+  /** Field-change history from Bugzilla, newest first. */
+  history: BugHistoryEntry[];
   /** Bugs listed in the Bugzilla `blocks` field. */
   blocks: LinkedBug[];
   /** Bugs listed in the Bugzilla `depends_on` field. */

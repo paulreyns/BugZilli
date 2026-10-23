@@ -43,6 +43,10 @@ function response(value: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
+function emptyHistory(id = 42): Response {
+  return response({ bugs: [{ id, history: [] }] });
+}
+
 describe("Bugzilla API client", () => {
   beforeEach(() => {
     fetchMock.mockReset();
@@ -241,6 +245,7 @@ describe("Bugzilla API client", () => {
           },
         }),
       )
+      .mockResolvedValueOnce(emptyHistory())
       .mockResolvedValueOnce(
         response({
           users: [
@@ -274,12 +279,100 @@ describe("Bugzilla API client", () => {
       creatorName: "QA Name",
       creationTime: "2024-01-04T09:00:00Z",
     });
+    expect(bug.history).toEqual([]);
     const [bugUrl] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(bugUrl.pathname).toContain("/rest/bug/42");
     expect(bugUrl.searchParams.has("include_fields")).toBe(false);
     for (const [url] of fetchMock.mock.calls as [URL, RequestInit][]) {
       expect(url.searchParams.get("api_key")).toBe("secret");
     }
+  });
+
+  it("maps bug history from /rest/bug/:id/history", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        response({ bugs: [{ id: 42, summary: "Toolbar is clipped", status: "ASSIGNED" }] }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              history: [
+                {
+                  when: "2024-01-01T10:00:00Z",
+                  who: "reporter@example.com",
+                  changes: [
+                    {
+                      field_name: "status",
+                      removed: "NEW",
+                      added: "ASSIGNED",
+                    },
+                  ],
+                },
+                {
+                  when: "2024-01-02T12:00:00Z",
+                  who: "qa@example.com",
+                  changes: [
+                    {
+                      field_name: "priority",
+                      removed: "P3",
+                      added: "P1",
+                    },
+                    {
+                      field_name: "isobsolete",
+                      removed: "0",
+                      added: "1",
+                      attachment_id: 7,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          users: [
+            {
+              name: "qa",
+              email: "qa@example.com",
+              real_name: "QA Name",
+            },
+          ],
+        }),
+      );
+
+    const bug = await getBug(42);
+
+    expect(bug.history).toEqual([
+      {
+        when: "2024-01-02T12:00:00Z",
+        who: "qa@example.com",
+        whoName: "QA Name",
+        changes: [
+          { fieldName: "priority", removed: "P3", added: "P1" },
+          {
+            fieldName: "isobsolete",
+            removed: "0",
+            added: "1",
+            attachmentId: 7,
+          },
+        ],
+      },
+      {
+        when: "2024-01-01T10:00:00Z",
+        who: "reporter@example.com",
+        changes: [{ fieldName: "status", removed: "NEW", added: "ASSIGNED" }],
+      },
+    ]);
+    const historyUrl = (fetchMock.mock.calls as [URL][])
+      .map(([url]) => url)
+      .find((url) => url.pathname === "/rest/bug/42/history");
+    expect(historyUrl).toBeTruthy();
   });
 
   it("maps extra Bugzilla fields onto the bug detail", async () => {
@@ -298,7 +391,8 @@ describe("Bugzilla API client", () => {
         }),
       )
       .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
-      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory());
 
     const bug = await getBug(42);
     expect(bug.extraFields).toMatchObject({
@@ -319,6 +413,9 @@ describe("Bugzilla API client", () => {
       }
       if (url.pathname === "/rest/bug/42/attachment") {
         return response({ bugs: { "42": [] } });
+      }
+      if (url.pathname === "/rest/bug/42/history") {
+        return emptyHistory();
       }
       return response({
         bugs: [
@@ -359,6 +456,7 @@ describe("Bugzilla API client", () => {
       .mockResolvedValueOnce(response({ bugs: [{ id: 42, blocks: [], depends_on: [9] }] }))
       .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
       .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory())
       .mockResolvedValueOnce(response({ error: true, message: "denied" }, false));
 
     const bug = await getBug(42);
@@ -459,7 +557,8 @@ describe("Bugzilla API client", () => {
       .mockResolvedValueOnce(
         response({ bugs: { "42": { comments: [{ id: 1, text: "Steps" }] } } }),
       )
-      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory());
 
     const bug = await updateBug(42, {
       summary: "Toolbar clips on resize",
@@ -532,7 +631,8 @@ describe("Bugzilla API client", () => {
       .mockResolvedValueOnce(
         response({ bugs: { "42": { comments: [{ id: 1, text: "Steps" }] } } }),
       )
-      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory());
 
     await updateBug(42, {
       extraFields: {
@@ -580,7 +680,8 @@ describe("Bugzilla API client", () => {
           },
         }),
       )
-      .mockResolvedValueOnce(response({ bugs: { "42": [] } }));
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory());
     fetchMock.mockResolvedValueOnce(
       response({ users: [{ name: "dev", real_name: "Dev Name" }] }),
     );
@@ -624,7 +725,8 @@ describe("Bugzilla API client", () => {
             ],
           },
         }),
-      );
+      )
+      .mockResolvedValueOnce(emptyHistory());
 
     const bug = await addAttachment(42, {
       fileName: "notes.txt",
