@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { groupBugsByBoard } from "../../shared/board-statuses";
 import type { Bug } from "../../shared/types";
-import { initials, statusClass } from "./BugViewShared";
+import { initials, statusClass, userAvatarStyle } from "./BugViewShared";
 
 interface BugBoardProps {
   bugs: Bug[];
@@ -74,8 +74,13 @@ export function BugBoard({
                     <span className="bug-card-component">{bug.component}</span>
                     <footer>
                       <span className="bug-key">{bug.id}</span>
-                      <span className="avatar">
-                        {initials(bug.assignedTo) || "?"}
+                      <span
+                        className="avatar"
+                        style={userAvatarStyle(
+                          bug.assignedTo || bug.assignedToName || "",
+                        )}
+                      >
+                        {initials(bug.assignedToName || bug.assignedTo) || "?"}
                       </span>
                     </footer>
                   </button>

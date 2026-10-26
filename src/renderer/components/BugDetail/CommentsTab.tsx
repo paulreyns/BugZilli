@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { BugComment, BugCommentDraft } from "../../../shared/types";
 import { formatDetailDate } from "../../utils/date";
+import { initials, userAvatarStyle } from "../BugViewShared";
 import { TabEmpty } from "./TabEmpty";
 
 export function CommentsTab({
@@ -50,7 +51,12 @@ export function CommentList({
     const creator = comment.creatorName || comment.creator;
     return (
       <article className="comment" key={comment.id}>
-        <span className="comment-avatar">{creator.slice(0, 1).toUpperCase()}</span>
+        <span
+          className="comment-avatar"
+          style={userAvatarStyle(comment.creator || creator)}
+        >
+          {initials(creator) || "?"}
+        </span>
         <div>
           <header>
             <strong>{creator}</strong>

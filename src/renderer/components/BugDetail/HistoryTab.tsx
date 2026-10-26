@@ -5,6 +5,7 @@ import {
 } from "../../../shared/detail-fields";
 import type { BugHistoryEntry } from "../../../shared/types";
 import { formatDetailDate } from "../../utils/date";
+import { initials, userAvatarStyle } from "../BugViewShared";
 import { TabEmpty } from "./TabEmpty";
 
 export function HistoryTab({
@@ -26,8 +27,11 @@ export function HistoryTab({
               className="history-entry"
               key={`${entry.when}-${entry.who}-${index}`}
             >
-              <span className="comment-avatar">
-                {who.slice(0, 1).toUpperCase() || "?"}
+              <span
+                className="comment-avatar"
+                style={userAvatarStyle(entry.who || who)}
+              >
+                {initials(who) || "?"}
               </span>
               <div>
                 <header>

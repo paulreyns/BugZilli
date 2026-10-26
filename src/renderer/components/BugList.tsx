@@ -22,7 +22,12 @@ import {
 } from "../../shared/list-sort";
 import type { Bug } from "../../shared/types";
 import { formatListDate } from "../utils/date";
-import { EmptyState, initials, statusClass } from "./BugViewShared";
+import {
+  EmptyState,
+  initials,
+  statusClass,
+  userAvatarStyle,
+} from "./BugViewShared";
 
 const LIST_SORTS_KEY = "bugzilli.listSorts";
 
@@ -99,7 +104,10 @@ function ColumnCell({ bug, column }: { bug: Bug; column: string }) {
       const assignee = bug.assignedToName || bug.assignedTo;
       return (
         <span className="assignee">
-          <span className="avatar">
+          <span
+            className="avatar"
+            style={userAvatarStyle(bug.assignedTo || assignee)}
+          >
             {initials(assignee) || <CircleUserRound size={16} />}
           </span>
           {assignee || "Unassigned"}
