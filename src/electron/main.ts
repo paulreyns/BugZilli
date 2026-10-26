@@ -19,6 +19,11 @@ import type {
   SettingsUpdate,
 } from "../shared/types.js";
 
+/** Matches the sidebar brand-mark (Lucide Bug on the blue→purple gradient). */
+function getAppIconPath(): string {
+  return path.join(__dirname, "../../build/icon.png");
+}
+
 function createWindow(): void {
   const window = new BrowserWindow({
     width: 1440,
@@ -27,6 +32,7 @@ function createWindow(): void {
     minHeight: 640,
     backgroundColor: "#f7f8fa",
     title: "Bugzilli",
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -103,6 +109,9 @@ function registerHandlers(): void {
 }
 
 void app.whenReady().then(() => {
+  if (process.platform === "darwin") {
+    app.dock?.setIcon(getAppIconPath());
+  }
   registerHandlers();
   createWindow();
   app.on("activate", () => {
