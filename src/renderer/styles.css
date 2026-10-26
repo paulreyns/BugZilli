@@ -239,7 +239,8 @@ button {
   gap: 4px;
 }
 
-.bug-id-copy-button {
+.bug-id-copy-button,
+.bug-id-open-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -256,12 +257,16 @@ button {
 }
 
 .bug-id-copy:hover .bug-id-copy-button,
-.bug-id-copy-button:focus-visible {
+.bug-id-copy:hover .bug-id-open-button,
+.bug-id-copy-button:focus-visible,
+.bug-id-open-button:focus-visible {
   opacity: 1;
 }
 
 .bug-id-copy-button:hover,
-.bug-id-copy-button:focus-visible {
+.bug-id-copy-button:focus-visible,
+.bug-id-open-button:hover,
+.bug-id-open-button:focus-visible {
   color: var(--blue);
 }
 

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   Component,
+  ExternalLink,
   History,
   Link,
   MessageSquare,
@@ -295,6 +296,16 @@ export function BugDetailPage({
               >
                 <Link size={13} aria-hidden="true" />
               </button>
+              <a
+                className="bug-id-open-button"
+                href={bugUrl(baseUrl, bug.id)}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open Bugzilla link in browser"
+                title="Open Bugzilla link in browser"
+              >
+                <ExternalLink size={13} aria-hidden="true" />
+              </a>
             </span>
           </p>
           {form ? (
