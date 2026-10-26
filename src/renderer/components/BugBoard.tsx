@@ -63,28 +63,34 @@ export function BugBoard({
             </header>
             {!collapsed && (
               <div className="board-cards">
-                {statusBugs.map((bug) => (
-                  <button
-                    type="button"
-                    className="bug-card"
-                    key={bug.id}
-                    onClick={() => onSelect(bug.id)}
-                  >
-                    <strong>{bug.summary}</strong>
-                    <span className="bug-card-component">{bug.component}</span>
-                    <footer>
-                      <span className="bug-key">{bug.id}</span>
-                      <span
-                        className="avatar"
-                        style={userAvatarStyle(
-                          bug.assignedTo || bug.assignedToName || "",
-                        )}
-                      >
-                        {initials(bug.assignedToName || bug.assignedTo) || "?"}
+                {statusBugs.map((bug) => {
+                  const assignee = bug.assignedToName || bug.assignedTo;
+                  return (
+                    <button
+                      type="button"
+                      className="bug-card"
+                      key={bug.id}
+                      onClick={() => onSelect(bug.id)}
+                    >
+                      <strong>{bug.summary}</strong>
+                      <span className="bug-card-component">
+                        {bug.component}
                       </span>
-                    </footer>
-                  </button>
-                ))}
+                      <footer>
+                        <span className="bug-key">{bug.id}</span>
+                        <span
+                          className="avatar"
+                          title={assignee}
+                          style={userAvatarStyle(
+                            bug.assignedTo || assignee || "",
+                          )}
+                        >
+                          {initials(assignee || "") || "?"}
+                        </span>
+                      </footer>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>

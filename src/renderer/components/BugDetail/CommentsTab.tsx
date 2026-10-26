@@ -53,6 +53,7 @@ export function CommentList({
       <article className="comment" key={comment.id}>
         <span
           className="comment-avatar"
+          title={creator}
           style={userAvatarStyle(comment.creator || creator)}
         >
           {initials(creator) || "?"}

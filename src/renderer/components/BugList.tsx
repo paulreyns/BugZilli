@@ -106,6 +106,7 @@ function ColumnCell({ bug, column }: { bug: Bug; column: string }) {
         <span className="assignee">
           <span
             className="avatar"
+            title={assignee}
             style={userAvatarStyle(bug.assignedTo || assignee)}
           >
             {initials(assignee) || <CircleUserRound size={16} />}

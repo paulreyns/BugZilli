@@ -29,6 +29,7 @@ export function HistoryTab({
             >
               <span
                 className="comment-avatar"
+                title={who}
                 style={userAvatarStyle(entry.who || who)}
               >
                 {initials(who) || "?"}
