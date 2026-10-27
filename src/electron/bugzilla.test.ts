@@ -27,6 +27,7 @@ import {
   addComment,
   getAttachmentFile,
   getBug,
+  getCurrentUser,
   getProductDetailFields,
   searchBugs,
   updateBug,
@@ -280,12 +281,74 @@ describe("Bugzilla API client", () => {
       creationTime: "2024-01-04T09:00:00Z",
     });
     expect(bug.history).toEqual([]);
+    expect(bug.cc).toEqual([]);
     const [bugUrl] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(bugUrl.pathname).toContain("/rest/bug/42");
     expect(bugUrl.searchParams.has("include_fields")).toBe(false);
     for (const [url] of fetchMock.mock.calls as [URL, RequestInit][]) {
       expect(url.searchParams.get("api_key")).toBe("secret");
     }
+  });
+
+  it("maps CC followers from cc_detail", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar is clipped",
+              cc: ["dev@example.com", "qa@example.com"],
+              cc_detail: [
+                {
+                  name: "dev@example.com",
+                  real_name: "Dev Name",
+                  email: "dev@example.com",
+                },
+                {
+                  name: "qa",
+                  real_name: "QA Name",
+                  email: "qa@example.com",
+                },
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory());
+
+    const bug = await getBug(42);
+
+    expect(bug.cc).toEqual([
+      { name: "dev@example.com", realName: "Dev Name" },
+      {
+        name: "qa",
+        realName: "QA Name",
+        email: "qa@example.com",
+      },
+    ]);
+  });
+
+  it("loads the current user from /rest/whoami", async () => {
+    fetchMock.mockResolvedValue(
+      response({
+        id: 9,
+        name: "me@example.com",
+        real_name: "Me",
+        nick: "me",
+      }),
+    );
+
+    await expect(getCurrentUser()).resolves.toEqual({
+      id: 9,
+      name: "me@example.com",
+      realName: "Me",
+      nick: "me",
+    });
+    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/whoami");
   });
 
   it("maps bug history from /rest/bug/:id/history", async () => {
@@ -648,6 +711,46 @@ describe("Bugzilla API client", () => {
       cf_team: "Apps",
       whiteboard: "[ready]",
       cf_tags: ["alpha", "beta"],
+    });
+  });
+
+  it("adds and removes CC followers through the update body", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ bugs: [{ id: 42 }] }))
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar is clipped",
+              cc: ["me@example.com"],
+              cc_detail: [
+                {
+                  name: "me@example.com",
+                  real_name: "Me",
+                  email: "me@example.com",
+                },
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory());
+
+    const bug = await updateBug(42, {
+      cc: { add: [" me@example.com "], remove: ["other@example.com"] },
+    });
+
+    expect(bug.cc).toEqual([{ name: "me@example.com", realName: "Me" }]);
+    const [, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(JSON.parse(String(options.body))).toEqual({
+      ids: [42],
+      cc: {
+        add: ["me@example.com"],
+        remove: ["other@example.com"],
+      },
     });
   });
 
