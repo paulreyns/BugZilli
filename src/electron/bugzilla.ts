@@ -19,8 +19,10 @@ import {
   type BugComment,
   type BugCommentDraft,
   type BugDetail,
+  type BugFollower,
   type BugHistoryChange,
   type BugHistoryEntry,
+  type BugzillaUser,
   type DetailFieldOption,
   type LinkedBug,
   type BugSearch,
@@ -303,8 +305,62 @@ function linkedBugsFor(ids: number[], linked: Map<number, LinkedBug>): LinkedBug
   return ids.map((id) => linked.get(id) ?? { id, summary: "", assignedTo: "" });
 }
 
+function mapFollower(value: JsonRecord): BugFollower | undefined {
+  const name = text(value.name) || text(value.email);
+  if (!name) return undefined;
+  const realName = text(value.real_name).trim();
+  const email = text(value.email).trim();
+  return {
+    name,
+    ...(realName ? { realName } : {}),
+    ...(email && email !== name ? { email } : {}),
+  };
+}
+
+function mapCc(bugValue: JsonRecord): BugFollower[] {
+  if (Array.isArray(bugValue.cc_detail)) {
+    const fromDetail = bugValue.cc_detail
+      .map((entry) =>
+        entry && typeof entry === "object"
+          ? mapFollower(entry as JsonRecord)
+          : undefined,
+      )
+      .filter((follower): follower is BugFollower => Boolean(follower));
+    if (fromDetail.length > 0) return fromDetail;
+  }
+  if (!Array.isArray(bugValue.cc)) return [];
+  return bugValue.cc
+    .map((entry) => {
+      if (typeof entry === "string" && entry.trim()) {
+        return { name: entry.trim() };
+      }
+      if (entry && typeof entry === "object") {
+        return mapFollower(entry as JsonRecord);
+      }
+      return undefined;
+    })
+    .filter((follower): follower is BugFollower => Boolean(follower));
+}
+
 function assertBugId(id: number): void {
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid bug number.");
+}
+
+export async function getCurrentUser(): Promise<BugzillaUser> {
+  const payload = await request("whoami");
+  const name = text(payload.name).trim();
+  if (!name) {
+    throw new Error("Bugzilla did not return the current user.");
+  }
+  const id = number(payload.id);
+  const realName = text(payload.real_name).trim();
+  const nick = text(payload.nick).trim();
+  return {
+    id,
+    name,
+    ...(realName ? { realName } : {}),
+    ...(nick ? { nick } : {}),
+  };
 }
 
 export async function getBug(id: number): Promise<BugDetail> {
@@ -389,6 +445,7 @@ export async function getBug(id: number): Promise<BugDetail> {
     history,
     blocks: linkedBugsFor(blockIds, linkedBugs),
     dependsOn: linkedBugsFor(dependsOnIds, linkedBugs),
+    cc: mapCc(bugValue),
   };
 }
 
@@ -432,6 +489,32 @@ function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
         return keyword.trim();
       }).filter(Boolean),
     };
+  }
+
+  if (update.cc !== undefined) {
+    if (
+      typeof update.cc !== "object" ||
+      update.cc === null ||
+      Array.isArray(update.cc)
+    ) {
+      throw new Error("CC changes must be an object with add/remove lists.");
+    }
+    const cc: JsonRecord = {};
+    for (const key of ["add", "remove"] as const) {
+      const list = update.cc[key];
+      if (list === undefined) continue;
+      if (!Array.isArray(list)) {
+        throw new Error(`CC ${key} must be a list of login names.`);
+      }
+      const names = list.map((entry) => {
+        if (typeof entry !== "string") {
+          throw new Error(`CC ${key} entries must be login names.`);
+        }
+        return entry.trim();
+      }).filter(Boolean);
+      if (names.length > 0) cc[key] = names;
+    }
+    if (Object.keys(cc).length > 0) body.cc = cc;
   }
 
   if (update.extraFields !== undefined) {

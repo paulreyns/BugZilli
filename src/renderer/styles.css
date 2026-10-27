@@ -1225,6 +1225,91 @@ button:disabled {
   gap: 8px;
 }
 
+.follow-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.follow-button {
+  width: 34px;
+  padding: 0;
+  color: #172b4d;
+}
+
+.follow-button-active {
+  color: var(--blue);
+  border-color: #b3d4ff;
+  background: var(--blue-soft);
+}
+
+.follow-button-active:hover {
+  background: #d6e7ff;
+}
+
+.follow-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 220px;
+  max-width: 300px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px #091e4226;
+}
+
+.follow-menu-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.follow-menu-action:hover:not(:disabled) {
+  background: #f1f2f4;
+}
+
+.follow-menu-divider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+.follow-menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.follow-menu-follower,
+.follow-menu-empty {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.follow-menu-follower {
+  color: #172b4d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .summary-input,
 .detail-control,
 .composer input:not([type="checkbox"]),

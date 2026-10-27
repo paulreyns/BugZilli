@@ -182,6 +182,23 @@ export interface LinkedBug {
   assignedToName?: string;
 }
 
+/** A user on a bug's CC (followers) list. */
+export interface BugFollower {
+  /** Bugzilla login name (used when adding/removing from CC). */
+  name: string;
+  realName?: string;
+  email?: string;
+}
+
+/** The authenticated Bugzilla account for the configured API key. */
+export interface BugzillaUser {
+  id: number;
+  /** Login name; also the value used in CC add/remove. */
+  name: string;
+  realName?: string;
+  nick?: string;
+}
+
 export interface BugDetail extends Bug {
   comments: BugComment[];
   attachments: BugAttachment[];
@@ -191,6 +208,8 @@ export interface BugDetail extends Bug {
   blocks: LinkedBug[];
   /** Bugs listed in the Bugzilla `depends_on` field. */
   dependsOn: LinkedBug[];
+  /** Users on the Bugzilla CC list (followers). */
+  cc: BugFollower[];
 }
 
 export interface BugUpdate {
@@ -209,6 +228,11 @@ export interface BugUpdate {
    * Multiselect fields use a string array; others use a single string.
    */
   extraFields?: Record<string, string | string[]>;
+  /** Add and/or remove login names on the Bugzilla CC list. */
+  cc?: {
+    add?: string[];
+    remove?: string[];
+  };
 }
 
 export interface BugCommentDraft {
@@ -232,6 +256,8 @@ export interface BugzilliApi {
   saveSettings(update: SettingsUpdate): Promise<AppSettings>;
   searchBugs(search: BugSearch): Promise<Bug[]>;
   getBug(id: number): Promise<BugDetail>;
+  /** Authenticated user for the configured API key (`GET /rest/whoami`). */
+  getCurrentUser(): Promise<BugzillaUser>;
   getProductDetailFields(product: string): Promise<DetailFieldOption[]>;
   updateBug(id: number, update: BugUpdate): Promise<BugDetail>;
   addComment(id: number, comment: BugCommentDraft): Promise<BugDetail>;

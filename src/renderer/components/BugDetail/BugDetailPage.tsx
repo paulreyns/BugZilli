@@ -16,6 +16,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { isFollowingBug } from "../../../shared/bug-follow";
 import {
   buildBugUpdate,
   draftFromBug,
@@ -39,6 +40,7 @@ import {
   type BugCommentDraft,
   type BugDetail,
   type BugUpdate,
+  type BugzillaUser,
   type DetailFieldOption,
   type DetailFieldType,
   type LinkedBug,
@@ -48,6 +50,7 @@ import { formatDetailDate } from "../../utils/date";
 import { FieldControl } from "../field-controls/FieldControl";
 import { AttachmentsTab } from "./AttachmentsTab";
 import { CommentsTab } from "./CommentsTab";
+import { FollowMenu } from "./FollowMenu";
 import { HistoryTab } from "./HistoryTab";
 import { IntegrationsTab } from "./IntegrationsTab";
 
@@ -67,7 +70,7 @@ interface BugDetailPageProps {
   onAddAttachment: (id: number, attachment: BugAttachmentDraft) => Promise<void>;
 }
 
-type PendingAction = "save" | "comment" | "attachment";
+type PendingAction = "save" | "comment" | "attachment" | "follow";
 
 function resolutionLabel(value: string): string {
   return value && value !== "---" ? value : "";
@@ -99,6 +102,7 @@ export function BugDetailPage({
     text: string;
   } | null>(null);
   const [fieldCatalog, setFieldCatalog] = useState<DetailFieldOption[]>([]);
+  const [currentUser, setCurrentUser] = useState<BugzillaUser>();
   const pendingRef = useRef(false);
 
   useEffect(() => {
@@ -108,6 +112,21 @@ export function BugDetailPage({
     setPending(null);
     pendingRef.current = false;
   }, [bug?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void window.bugzilli
+      .getCurrentUser()
+      .then((user) => {
+        if (!cancelled) setCurrentUser(user);
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentUser(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const product = bug?.product?.trim();
@@ -216,6 +235,25 @@ export function BugDetailPage({
         setEditing(false);
         setDraft(null);
         return "Bug updated.";
+      });
+    } catch {
+      // The banner already shows the Bugzilla error.
+    }
+  }
+
+  async function toggleFollowing(follow: boolean) {
+    if (!bug || !currentUser?.name.trim() || pendingRef.current || editing) {
+      return;
+    }
+    const alreadyFollowing = isFollowingBug(bug.cc, currentUser);
+    if (follow === alreadyFollowing) return;
+    const login = currentUser.name.trim();
+    try {
+      await run("follow", async () => {
+        await onUpdateBug(bug.id, {
+          cc: follow ? { add: [login] } : { remove: [login] },
+        });
+        return follow ? "Now following this bug." : "Stopped following this bug.";
       });
     } catch {
       // The banner already shows the Bugzilla error.
@@ -364,6 +402,14 @@ export function BugDetailPage({
               <Pencil size={15} /> Edit
             </button>
           )}
+          <FollowMenu
+            followers={bug.cc}
+            {...(currentUser ? { currentUser } : {})}
+            disabled={editing || pending !== null}
+            pending={pending === "follow"}
+            onStartFollowing={() => void toggleFollowing(true)}
+            onStopFollowing={() => void toggleFollowing(false)}
+          />
           <span className="detail-status">
             {(shownStatus || "Status").replaceAll("_", " ")}
           </span>

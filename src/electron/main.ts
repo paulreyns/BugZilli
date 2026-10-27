@@ -6,6 +6,7 @@ import {
   addComment,
   getAttachmentFile,
   getBug,
+  getCurrentUser,
   getProductDetailFields,
   searchBugs,
   updateBug,
@@ -93,6 +94,7 @@ function registerHandlers(): void {
     searchBugs(search),
   );
   ipcMain.handle("bugs:get", (_event, id: number) => getBug(id));
+  ipcMain.handle("user:current", () => getCurrentUser());
   ipcMain.handle("bugs:productFields", (_event, product: string) =>
     getProductDetailFields(product),
   );
