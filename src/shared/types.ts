@@ -236,7 +236,10 @@ export interface BugzilliApi {
   updateBug(id: number, update: BugUpdate): Promise<BugDetail>;
   addComment(id: number, comment: BugCommentDraft): Promise<BugDetail>;
   addAttachment(id: number, attachment: BugAttachmentDraft): Promise<BugDetail>;
+  /** Downloads to the default downloads folder and opens with the system app. */
   openAttachment(id: number): Promise<void>;
+  /** Prompts for a save location. */
+  saveAttachment(id: number): Promise<void>;
   readClipboardText(): Promise<string>;
   writeClipboardText(text: string): Promise<void>;
 }
