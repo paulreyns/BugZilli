@@ -61,6 +61,7 @@ interface BugDetailPageProps {
   onBack: () => void;
   onOpenBug: (id: number) => void;
   onOpenAttachment: (id: number) => Promise<void>;
+  onSaveAttachment: (id: number) => Promise<void>;
   onUpdateBug: (id: number, update: BugUpdate) => Promise<void>;
   onAddComment: (id: number, comment: BugCommentDraft) => Promise<void>;
   onAddAttachment: (id: number, attachment: BugAttachmentDraft) => Promise<void>;
@@ -82,6 +83,7 @@ export function BugDetailPage({
   onBack,
   onOpenBug,
   onOpenAttachment,
+  onSaveAttachment,
   onUpdateBug,
   onAddComment,
   onAddAttachment,
@@ -467,6 +469,7 @@ export function BugDetailPage({
                 })
               }
               onOpenAttachment={onOpenAttachment}
+              onSaveAttachment={onSaveAttachment}
               onError={(text) => setFeedback({ tone: "error", text })}
             />
             <HistoryTab

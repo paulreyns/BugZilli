@@ -24,6 +24,8 @@ const api: BugzilliApi = {
     ipcRenderer.invoke("bugs:attachment", id, attachment),
   openAttachment: (id: number) =>
     ipcRenderer.invoke("attachments:open", id),
+  saveAttachment: (id: number) =>
+    ipcRenderer.invoke("attachments:save", id),
   readClipboardText: () => ipcRenderer.invoke("clipboard:read-text"),
   writeClipboardText: (text: string) =>
     ipcRenderer.invoke("clipboard:write-text", text),

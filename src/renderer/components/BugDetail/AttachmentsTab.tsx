@@ -17,6 +17,7 @@ export function AttachmentsTab({
   pending,
   onSubmit,
   onOpenAttachment,
+  onSaveAttachment,
   onError,
 }: {
   hidden: boolean;
@@ -26,6 +27,7 @@ export function AttachmentsTab({
   pending: boolean;
   onSubmit: (attachment: BugAttachmentDraft) => Promise<void>;
   onOpenAttachment: (id: number) => Promise<void>;
+  onSaveAttachment: (id: number) => Promise<void>;
   onError: (message: string) => void;
 }) {
   return (
@@ -40,43 +42,55 @@ export function AttachmentsTab({
         <TabEmpty icon={<Paperclip size={28} />} text="No attachments." />
       ) : (
         attachments.map((attachment) => (
-          <button
-            type="button"
-            className="attachment"
-            key={attachment.id}
-            onClick={() => {
-              void (async () => {
-                try {
-                  await onOpenAttachment(attachment.id);
-                } catch (caught) {
-                  onError(errorMessage(caught));
-                }
-              })();
-            }}
-          >
-            <span className="file-icon">
-              <File size={20} />
-            </span>
-            <span className="attachment-info">
-              <span className="attachment-title">
-                <strong>{attachment.fileName}</strong>
-                <span>({fileSize(attachment.size)})</span>
+          <div className="attachment" key={attachment.id}>
+            <button
+              type="button"
+              className="attachment-open"
+              title={`Open ${attachment.fileName}`}
+              onClick={() => runAction(onOpenAttachment, attachment.id)}
+            >
+              <span className="file-icon">
+                <File size={20} />
               </span>
-              <span className="attachment-meta">
-                {attachment.summary || attachment.contentType} ·{" "}
-                {formatDetailDate(attachment.creationTime)} ·{" "}
-                {attachment.creatorName || attachment.creator}
+              <span className="attachment-info">
+                <span className="attachment-title">
+                  <strong>{attachment.fileName}</strong>
+                  <span>({fileSize(attachment.size)})</span>
+                </span>
+                <span className="attachment-meta">
+                  {attachment.summary || attachment.contentType} ·{" "}
+                  {formatDetailDate(attachment.creationTime)} ·{" "}
+                  {attachment.creatorName || attachment.creator}
+                </span>
               </span>
-            </span>
-            {attachment.isObsolete && (
-              <span className="obsolete-pill">Obsolete</span>
-            )}
-            <Download size={17} />
-          </button>
+              {attachment.isObsolete && (
+                <span className="obsolete-pill">Obsolete</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className="attachment-download"
+              title={`Save ${attachment.fileName} as…`}
+              aria-label={`Save ${attachment.fileName} as`}
+              onClick={() => runAction(onSaveAttachment, attachment.id)}
+            >
+              <Download size={17} />
+            </button>
+          </div>
         ))
       )}
     </div>
   );
+
+  function runAction(action: (id: number) => Promise<void>, id: number) {
+    void (async () => {
+      try {
+        await action(id);
+      } catch (caught) {
+        onError(errorMessage(caught));
+      }
+    })();
+  }
 }
 
 function fileSize(bytes: number): string {

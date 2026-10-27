@@ -349,6 +349,7 @@ export default function App() {
         }}
         onOpenBug={(id) => void openBug(id)}
         onOpenAttachment={(id) => window.bugzilli.openAttachment(id)}
+        onSaveAttachment={(id) => window.bugzilli.saveAttachment(id)}
         onUpdateBug={updateBug}
         onAddComment={addComment}
         onAddAttachment={addAttachment}

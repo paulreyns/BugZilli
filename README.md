@@ -14,7 +14,7 @@ the only source of data.
 - Press `Ctrl+G` to jump straight to a bug by ID (pre-filled from a numeric
   clipboard value)
 - Browse comments, attachments, and change history in separate tabs
-- Download attachments through Electron's save dialog
+- Open attachments by clicking the row (saved to the Downloads folder and opened with the default app), or use the download button to choose a save location
 
 The API key is encrypted with Electron `safeStorage` when the operating system
 credential store is available. Settings are saved in Electron's per-user

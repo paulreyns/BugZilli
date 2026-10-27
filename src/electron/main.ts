@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from "electron";
-import { writeFile } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   addAttachment,
@@ -66,6 +66,24 @@ function createWindow(): void {
   }
 }
 
+async function uniqueDownloadPath(fileName: string): Promise<string> {
+  const directory = app.getPath("downloads");
+  const safeName = path.basename(fileName.replace(/\\/g, "/")) || "attachment";
+  const extension = path.extname(safeName);
+  const stem = safeName.slice(0, safeName.length - extension.length);
+  for (let index = 0; ; index += 1) {
+    const candidate = path.join(
+      directory,
+      index === 0 ? safeName : `${stem} (${index})${extension}`,
+    );
+    try {
+      await access(candidate);
+    } catch {
+      return candidate;
+    }
+  }
+}
+
 function registerHandlers(): void {
   ipcMain.handle("settings:get", () => getSettings());
   ipcMain.handle("settings:save", (_event, update: SettingsUpdate) =>
@@ -89,7 +107,14 @@ function registerHandlers(): void {
     (_event, id: number, attachment: BugAttachmentDraft) =>
       addAttachment(id, attachment),
   );
-  ipcMain.handle("attachments:open", async (event, id: number) => {
+  ipcMain.handle("attachments:open", async (_event, id: number) => {
+    const attachment = await getAttachmentFile(id);
+    const filePath = await uniqueDownloadPath(attachment.fileName);
+    await writeFile(filePath, attachment.data, { flag: "wx" });
+    const error = await shell.openPath(filePath);
+    if (error) throw new Error(`Saved to ${filePath} but could not open it: ${error}`);
+  });
+  ipcMain.handle("attachments:save", async (event, id: number) => {
     const attachment = await getAttachmentFile(id);
     const window = BrowserWindow.fromWebContents(event.sender);
     const options = {

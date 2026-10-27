@@ -1594,20 +1594,46 @@ select.detail-control {
 }
 
 .attachment {
-  width: 100%;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #ebecf0;
+  background: white;
+}
+
+.attachment:hover {
+  background: #f7f8fa;
+}
+
+.attachment-open {
+  min-width: 0;
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 11px 8px;
   border: 0;
-  border-bottom: 1px solid #ebecf0;
-  background: white;
+  background: transparent;
   text-align: left;
   cursor: pointer;
 }
 
-.attachment:hover {
-  background: #f7f8fa;
+.attachment-download {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.attachment-download:hover {
+  background: #e9f2ff;
+  color: #0c66e4;
 }
 
 .file-icon {
