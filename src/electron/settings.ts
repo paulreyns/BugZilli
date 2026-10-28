@@ -7,6 +7,7 @@ import type { AppSettings, Project, SettingsUpdate } from "../shared/types.js";
 interface StoredSettings {
   baseUrl: string;
   projects: Project[];
+  userEmail?: string;
   integrationUser?: string;
   apiKey?: string;
   keyStorage?: "secure" | "plain";
@@ -86,6 +87,9 @@ async function readStoredSettings(): Promise<StoredSettings> {
     return {
       baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
       projects: Array.isArray(value.projects) ? value.projects : [],
+      ...(typeof value.userEmail === "string" && value.userEmail.trim()
+        ? { userEmail: value.userEmail.trim() }
+        : {}),
       ...(typeof value.integrationUser === "string" && value.integrationUser.trim()
         ? { integrationUser: value.integrationUser.trim() }
         : {}),
@@ -115,6 +119,7 @@ function publicSettings(stored: StoredSettings): AppSettings {
   return {
     baseUrl: stored.baseUrl,
     projects: stored.projects,
+    userEmail: stored.userEmail ?? "",
     integrationUser: stored.integrationUser ?? "",
     hasApiKey: Boolean(stored.apiKey),
     keyStorage: stored.apiKey ? (stored.keyStorage ?? "plain") : "none",
@@ -128,6 +133,7 @@ export async function getSettings(): Promise<AppSettings> {
 export async function getConnection(): Promise<{
   baseUrl: string;
   apiKey: string;
+  userEmail: string;
   projects: Project[];
 }> {
   const stored = await readStoredSettings();
@@ -135,6 +141,7 @@ export async function getConnection(): Promise<{
   return {
     baseUrl: stored.baseUrl,
     apiKey: decryptKey(stored),
+    userEmail: stored.userEmail ?? "",
     projects: stored.projects,
   };
 }
@@ -150,6 +157,12 @@ export async function saveSettings(update: SettingsUpdate): Promise<AppSettings>
       ? update.integrationUser.trim()
       : (current.integrationUser ?? "");
   if (integrationUser) next.integrationUser = integrationUser;
+
+  const userEmail =
+    typeof update.userEmail === "string"
+      ? update.userEmail.trim()
+      : (current.userEmail ?? "");
+  if (userEmail) next.userEmail = userEmail;
 
   if (!update.clearApiKey && update.apiKey === undefined && current.apiKey) {
     next.apiKey = current.apiKey;

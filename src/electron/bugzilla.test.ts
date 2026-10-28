@@ -4,6 +4,7 @@ vi.mock("./settings.js", () => ({
   getConnection: vi.fn().mockResolvedValue({
     baseUrl: "https://bugs.example.com",
     apiKey: "secret",
+    userEmail: "me@example.com",
     projects: [
       { id: "browser", name: "Browser", product: "Browser" },
       {
@@ -301,11 +302,13 @@ describe("Bugzilla API client", () => {
               cc: ["dev@example.com", "qa@example.com"],
               cc_detail: [
                 {
+                  id: 7,
                   name: "dev@example.com",
                   real_name: "Dev Name",
                   email: "dev@example.com",
                 },
                 {
+                  id: 8,
                   name: "qa",
                   real_name: "QA Name",
                   email: "qa@example.com",
@@ -322,8 +325,9 @@ describe("Bugzilla API client", () => {
     const bug = await getBug(42);
 
     expect(bug.cc).toEqual([
-      { name: "dev@example.com", realName: "Dev Name" },
+      { id: 7, name: "dev@example.com", realName: "Dev Name" },
       {
+        id: 8,
         name: "qa",
         realName: "QA Name",
         email: "qa@example.com",
@@ -331,24 +335,13 @@ describe("Bugzilla API client", () => {
     ]);
   });
 
-  it("loads the current user from /rest/whoami", async () => {
-    fetchMock.mockResolvedValue(
-      response({
-        id: 9,
-        name: "me@example.com",
-        real_name: "Me",
-        nick: "me",
-      }),
-    );
-
+  it("uses the configured User Email Address for the current user", async () => {
     await expect(getCurrentUser()).resolves.toEqual({
-      id: 9,
+      id: 0,
       name: "me@example.com",
-      realName: "Me",
-      nick: "me",
+      email: "me@example.com",
     });
-    const [url] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.pathname).toBe("/rest/whoami");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("maps bug history from /rest/bug/:id/history", async () => {

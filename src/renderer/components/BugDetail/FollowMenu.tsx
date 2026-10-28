@@ -63,6 +63,7 @@ export function FollowMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
+        aria-pressed={following}
         title={following ? "Following" : "Follow"}
         disabled={disabled || pending}
         onClick={() => setOpen((current) => !current)}

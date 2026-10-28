@@ -9,11 +9,20 @@ export function isFollowingBug(
   followers: BugFollower[],
   user: BugzillaUser | undefined,
 ): boolean {
-  if (!user?.name.trim()) return false;
-  const login = normalize(user.name);
+  if (!user) return false;
   return followers.some((follower) => {
-    const names = [follower.name, follower.email].filter(Boolean) as string[];
-    return names.some((name) => normalize(name) === login);
+    
+    if (user.id > 0 && follower.id !== undefined && user.id === follower.id) {
+      return true;
+    }
+
+    const userNames = [user.name, user.email, user.nick, user.realName]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .map(normalize);
+    const followerNames = [follower.name, follower.email, follower.realName]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .map(normalize);
+    return userNames.some((userName) => followerNames.includes(userName));
   });
 }
 

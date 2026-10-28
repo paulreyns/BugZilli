@@ -878,6 +878,13 @@ button:disabled {
   box-shadow: 0 0 0 1px var(--blue);
 }
 
+.field-guidance {
+ margin: 0;
+ color: var(--muted);
+ font-size: 12px;
+ font-weight: 400;
+}
+
 .label-with-status {
   display: flex;
   align-items: center;

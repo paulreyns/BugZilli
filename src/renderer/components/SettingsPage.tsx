@@ -29,6 +29,7 @@ export function SettingsPage({
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [apiKey, setApiKey] = useState("");
   const [clearApiKey, setClearApiKey] = useState(false);
+  const [userEmail, setUserEmail] = useState(settings.userEmail);
   const [integrationUser, setIntegrationUser] = useState(settings.integrationUser);
   const [projects, setProjects] = useState<Project[]>(settings.projects);
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,7 @@ export function SettingsPage({
 
   useEffect(() => {
     setBaseUrl(settings.baseUrl);
+    setUserEmail(settings.userEmail);
     setIntegrationUser(settings.integrationUser);
     setProjects(settings.projects);
   }, [settings]);
@@ -70,6 +72,7 @@ export function SettingsPage({
       await onSave({
         baseUrl,
         projects,
+        userEmail,
         integrationUser,
         ...(apiKey.trim() ? { apiKey } : {}),
         ...(clearApiKey ? { clearApiKey: true } : {}),
@@ -123,6 +126,18 @@ export function SettingsPage({
                 onChange={(event) => setBaseUrl(event.target.value)}
                 required
               />
+            </label>
+            <label>
+              User Email Address
+              <input
+                type="email"
+                value={userEmail}
+                placeholder="you@example.com"
+                onChange={(event) => setUserEmail(event.target.value)}
+              />
+              <p className="field-guidance">
+                This is used for matching the bug's you are following and delivering notifications
+              </p>
             </label>
             <label>
               <span className="label-with-status">

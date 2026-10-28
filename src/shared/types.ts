@@ -90,6 +90,8 @@ export interface DetailFieldOption {
 export interface AppSettings {
   baseUrl: string;
   projects: Project[];
+  /** Email address used to identify the current Bugzilla user. */
+  userEmail: string;
   /** Bugzilla login whose comments appear under the Integrations tab. */
   integrationUser: string;
   hasApiKey: boolean;
@@ -99,6 +101,8 @@ export interface AppSettings {
 export interface SettingsUpdate {
   baseUrl: string;
   projects: Project[];
+  /** Omit to keep the saved value; an empty string clears it. */
+  userEmail?: string;
   /** Omit to keep the saved value; an empty string clears it. */
   integrationUser?: string;
   apiKey?: string;
@@ -184,6 +188,8 @@ export interface LinkedBug {
 
 /** A user on a bug's CC (followers) list. */
 export interface BugFollower {
+  /** Bugzilla user ID, when supplied by cc_detail. */
+  id?: number;
   /** Bugzilla login name (used when adding/removing from CC). */
   name: string;
   realName?: string;
@@ -195,6 +201,7 @@ export interface BugzillaUser {
   id: number;
   /** Login name; also the value used in CC add/remove. */
   name: string;
+  email?: string;
   realName?: string;
   nick?: string;
 }
@@ -256,7 +263,7 @@ export interface BugzilliApi {
   saveSettings(update: SettingsUpdate): Promise<AppSettings>;
   searchBugs(search: BugSearch): Promise<Bug[]>;
   getBug(id: number): Promise<BugDetail>;
-  /** Authenticated user for the configured API key (`GET /rest/whoami`). */
+  /** Current user identified from the configured User Email Address. */
   getCurrentUser(): Promise<BugzillaUser>;
   getProductDetailFields(product: string): Promise<DetailFieldOption[]>;
   updateBug(id: number, update: BugUpdate): Promise<BugDetail>;

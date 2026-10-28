@@ -308,9 +308,11 @@ function linkedBugsFor(ids: number[], linked: Map<number, LinkedBug>): LinkedBug
 function mapFollower(value: JsonRecord): BugFollower | undefined {
   const name = text(value.name) || text(value.email);
   if (!name) return undefined;
+  const id = number(value.id);
   const realName = text(value.real_name).trim();
   const email = text(value.email).trim();
   return {
+    ...(id ? { id } : {}),
     name,
     ...(realName ? { realName } : {}),
     ...(email && email !== name ? { email } : {}),
@@ -347,19 +349,15 @@ function assertBugId(id: number): void {
 }
 
 export async function getCurrentUser(): Promise<BugzillaUser> {
-  const payload = await request("whoami");
-  const name = text(payload.name).trim();
-  if (!name) {
-    throw new Error("Bugzilla did not return the current user.");
+  const { userEmail } = await getConnection();
+  const email = userEmail.trim();
+  if (!email) {
+    throw new Error("Set your User Email Address in App Settings.");
   }
-  const id = number(payload.id);
-  const realName = text(payload.real_name).trim();
-  const nick = text(payload.nick).trim();
   return {
-    id,
-    name,
-    ...(realName ? { realName } : {}),
-    ...(nick ? { nick } : {}),
+    id: 0,
+    name: email,
+    email,
   };
 }
 

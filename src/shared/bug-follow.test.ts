@@ -14,11 +14,43 @@ describe("isFollowingBug", () => {
     expect(isFollowingBug(followers, user)).toBe(true);
   });
 
+  it("matches Bugzilla users by ID when login names differ", () => {
+    const followers: BugFollower[] = [{ id: 9, name: "different-login" }];
+    expect(isFollowingBug(followers, { ...user, id: 9 })).toBe(true);
+  });
+
   it("matches against follower email when login differs", () => {
     const followers: BugFollower[] = [
       { name: "me", email: "me@example.com", realName: "Me" },
     ];
     expect(isFollowingBug(followers, user)).toBe(true);
+  });
+
+  it("matches the current user's email when it differs from the login", () => {
+    expect(
+      isFollowingBug(
+        [{ name: "me@example.com" }],
+        { ...user, name: "me-login", email: "me@example.com" },
+      ),
+    ).toBe(true);
+  });
+
+  it("matches followers by current user nick", () => {
+    expect(
+      isFollowingBug(
+        [{ name: "me-nick" }],
+        { ...user, name: "me-login", nick: "me-nick" },
+      ),
+    ).toBe(true);
+  });
+
+  it("matches followers by real name", () => {
+    expect(
+      isFollowingBug(
+        [{ name: "me-login", realName: "Me" }],
+        { ...user, name: "other-login", realName: "Me" },
+      ),
+    ).toBe(true);
   });
 
   it("returns false when the user is not on the CC list", () => {
