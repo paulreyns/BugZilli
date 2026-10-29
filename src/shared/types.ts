@@ -90,6 +90,8 @@ export interface DetailFieldOption {
   type?: DetailFieldType;
   /** Legal values for select / multiselect fields (product-filtered when possible). */
   values?: string[];
+  /** True when Bugzilla marks the field mandatory (`is_mandatory`). */
+  required?: boolean;
 }
 
 export interface AppSettings {
@@ -275,6 +277,24 @@ export interface BugUpdate {
   };
 }
 
+/** Values collected on the add-bug form and posted to Bugzilla. */
+export interface BugCreate {
+  summary: string;
+  description: string;
+  status: string;
+  resolution: string;
+  assignedTo: string;
+  priority: string;
+  severity: string;
+  component: string;
+  version: string;
+  platform: string;
+  /** Comma-separated keywords, matching the detail editor. */
+  keywords: string;
+  /** Custom / uncommon fields keyed by app field key. */
+  extraFields: Record<string, string>;
+}
+
 export interface BugCommentDraft {
   text: string;
   isPrivate?: boolean;
@@ -302,6 +322,15 @@ export interface BugzilliApi {
   getCurrentUser(): Promise<BugzillaUser>;
   getProductDetailFields(product: string): Promise<DetailFieldOption[]>;
   updateBug(id: number, update: BugUpdate): Promise<BugDetail>;
+  /**
+   * File a new bug in `product`. `fieldTypes` selects how custom fields are
+   * encoded (multiselect values are sent as lists).
+   */
+  createBug(
+    product: string,
+    draft: BugCreate,
+    fieldTypes?: Record<string, DetailFieldType>,
+  ): Promise<BugDetail>;
   addComment(id: number, comment: BugCommentDraft): Promise<BugDetail>;
   addAttachment(id: number, attachment: BugAttachmentDraft): Promise<BugDetail>;
   /** Downloads to the default downloads folder and opens with the system app. */

@@ -10,4 +10,10 @@ export interface FieldControlProps {
   values?: string[] | undefined;
   disabled: boolean;
   onChange: (value: string) => void;
+  /** Show a red asterisk. Used when Bugzilla marks the field mandatory. */
+  required?: boolean | undefined;
+  /** Show a red indicator and invalid styling. */
+  invalid?: boolean | undefined;
+  /** Message announced with the invalid field. */
+  error?: string | undefined;
 }

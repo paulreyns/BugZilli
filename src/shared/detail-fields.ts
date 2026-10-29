@@ -49,6 +49,8 @@ export interface BugzillaFieldApiRecord {
   visibility_values?: unknown;
   value_field?: unknown;
   values?: unknown;
+  /** Bugzilla `is_mandatory`: the field must have a value. */
+  is_mandatory?: unknown;
 }
 
 /**
@@ -495,6 +497,7 @@ export function catalogFromFieldApi(
       label: known?.label || displayName || humanizeFieldKey(key),
       type,
       ...(values.length > 0 ? { values } : {}),
+      ...(field.is_mandatory === true ? { required: true } : {}),
     };
     catalog.set(key, option);
   }

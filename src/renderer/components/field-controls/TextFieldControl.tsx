@@ -1,4 +1,5 @@
 import type { FieldControlProps } from "./FieldControlProps";
+import { fieldAria, fieldControlClass, FieldShell } from "./FieldShell";
 
 export function TextFieldControl({
   id,
@@ -8,21 +9,29 @@ export function TextFieldControl({
   values,
   disabled,
   onChange,
+  required,
+  invalid,
+  error,
 }: FieldControlProps) {
   const suggestions = values?.length ? values : undefined;
 
   return (
-    <div className="detail-row">
-      <label className="detail-label" htmlFor={id}>
-        {icon} {label}
-      </label>
+    <FieldShell
+      id={id}
+      label={label}
+      icon={icon}
+      required={required}
+      invalid={invalid}
+      error={error}
+    >
       <input
         id={id}
-        className="detail-control"
+        className={fieldControlClass(invalid)}
         value={value}
         disabled={disabled}
         spellCheck={suggestions === undefined}
         onChange={(event) => onChange(event.target.value)}
+        {...fieldAria(id, { required, invalid, error })}
         {...(suggestions ? { list: `${id}-options` } : {})}
       />
       {suggestions && (
@@ -32,6 +41,6 @@ export function TextFieldControl({
           ))}
         </datalist>
       )}
-    </div>
+    </FieldShell>
   );
 }

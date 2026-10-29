@@ -221,6 +221,13 @@ button {
   margin-bottom: 26px;
 }
 
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
 .page-header h1,
 .detail-title h1 {
   margin: 2px 0 0;
@@ -1350,6 +1357,27 @@ button:disabled {
   line-height: 1.25;
 }
 
+.summary-edit {
+  position: relative;
+}
+
+.summary-edit .summary-input {
+  padding-right: 28px;
+}
+
+.summary-edit .required-mark {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  margin: 0;
+  font-size: 22px;
+  pointer-events: none;
+}
+
+.summary-edit:has(.summary-error-icon) .summary-input {
+  padding-right: 52px;
+}
+
 .detail-control {
   height: 32px;
   padding: 0 8px;
@@ -1398,9 +1426,25 @@ select.detail-control {
 .summary-input:focus,
 .detail-control:focus,
 .composer input:not([type="checkbox"]):focus,
-.composer textarea:focus {
+.composer textarea:focus,
+.description-input:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 1px var(--blue);
+}
+
+.summary-input.summary-input-invalid,
+.detail-control.detail-control-invalid,
+.detail-multiselect.detail-multiselect-invalid,
+.description-input.description-input-invalid {
+  border-color: #ae2a19;
+  box-shadow: 0 0 0 1px #ae2a19;
+}
+
+.summary-input.summary-input-invalid:focus,
+.detail-control.detail-control-invalid:focus,
+.description-input.description-input-invalid:focus {
+  border-color: #ae2a19;
+  box-shadow: 0 0 0 1px #ae2a19;
 }
 
 .summary-input:disabled,
@@ -1456,6 +1500,31 @@ select.detail-control {
   border: 1px solid #ebecf0;
   border-radius: 6px;
   background: #fafbfc;
+}
+
+.description-section h2.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.description-input {
+  width: 100%;
+  min-height: 85px;
+  padding: 16px;
+  color: #2c3e5d;
+  border: 1px solid #b6bdc8;
+  border-radius: 6px;
+  outline: 0;
+  background: white;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+.description-input:disabled {
+  background: #f7f8fa;
 }
 
 .linked-bugs-section {
@@ -1863,6 +1932,43 @@ select.detail-control {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.required-mark {
+  color: #ae2a19;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+}
+
+.field-error-icon {
+  margin-left: auto;
+  color: #ae2a19;
+  flex: 0 0 auto;
+}
+
+.summary-error-icon,
+.section-heading .field-error-icon {
+  margin-left: 0;
+}
+
+.summary-error-icon {
+  position: absolute;
+  top: 14px;
+  right: 34px;
+  margin: 0;
+}
+
+.field-error {
+  margin: 4px 0 0;
+  color: #ae2a19;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.detail-row-invalid + .field-hint {
+  margin-top: 4px;
 }
 
 .detail-row > strong {
