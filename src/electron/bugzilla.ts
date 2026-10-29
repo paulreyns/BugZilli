@@ -1,3 +1,4 @@
+import { parseBugId } from "../shared/bugId.js";
 import {
   baseBugFields,
   bugzillaNameForKey,
@@ -288,12 +289,7 @@ async function getLinkedBugs(ids: number[]): Promise<Map<number, LinkedBug>> {
     if (!Array.isArray(payload.bugs)) return linked;
     for (const value of payload.bugs) {
       const bug = mapBug(value as JsonRecord);
-      linked.set(bug.id, {
-        id: bug.id,
-        summary: bug.summary,
-        assignedTo: bug.assignedTo,
-        ...(bug.assignedToName ? { assignedToName: bug.assignedToName } : {}),
-      });
+      linked.set(bug.id, toLinkedBug(bug));
     }
   } catch {
     // Linked bug details are best-effort; the IDs are still shown.
@@ -454,6 +450,70 @@ const requiredFields: Record<string, string> = {
   component: "Component",
 };
 
+function linkedBugIdChange(
+  change: { add?: number[]; remove?: number[] } | undefined,
+  fieldLabel: string,
+): JsonRecord | undefined {
+  if (change === undefined) return undefined;
+  if (
+    typeof change !== "object" ||
+    change === null ||
+    Array.isArray(change)
+  ) {
+    throw new Error(
+      `${fieldLabel} changes must be an object with add/remove lists.`,
+    );
+  }
+  const result: JsonRecord = {};
+  for (const key of ["add", "remove"] as const) {
+    const list = change[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) {
+      throw new Error(`${fieldLabel} ${key} must be a list of bug IDs.`);
+    }
+    const ids = list.map((entry) => {
+      if (!Number.isInteger(entry) || entry <= 0) {
+        throw new Error(`${fieldLabel} ${key} entries must be bug IDs.`);
+      }
+      return entry;
+    });
+    if (ids.length > 0) result[key] = [...new Set(ids)];
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function toLinkedBug(bug: Bug): LinkedBug {
+  return {
+    id: bug.id,
+    summary: bug.summary,
+    assignedTo: bug.assignedTo,
+    ...(bug.assignedToName ? { assignedToName: bug.assignedToName } : {}),
+  };
+}
+
+/** Search bugs by numeric id or summary/quicksearch for the link picker. */
+export async function searchLinkableBugs(query: string): Promise<LinkedBug[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  await getConnection();
+
+  const params = new URLSearchParams({
+    include_fields: "id,summary,assigned_to,assigned_to_detail",
+    limit: "20",
+    order: "changeddate DESC",
+  });
+  const bugId = parseBugId(trimmed);
+  if (bugId !== undefined) {
+    params.append("id", String(bugId));
+  } else {
+    params.set("quicksearch", trimmed);
+  }
+
+  const payload = await request("bug", { params });
+  if (!Array.isArray(payload.bugs)) return [];
+  return payload.bugs.map((value) => toLinkedBug(mapBug(value as JsonRecord)));
+}
+
 function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
   const body: JsonRecord = { ids: [id] };
   const fields: [keyof BugUpdate, string][] = [
@@ -514,6 +574,11 @@ function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
     }
     if (Object.keys(cc).length > 0) body.cc = cc;
   }
+
+  const blocksChange = linkedBugIdChange(update.blocks, "blocks");
+  if (blocksChange) body.blocks = blocksChange;
+  const dependsOnChange = linkedBugIdChange(update.dependsOn, "depends_on");
+  if (dependsOnChange) body.depends_on = dependsOnChange;
 
   if (update.extraFields !== undefined) {
     if (

@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   getProductDetailFields,
   searchBugs,
+  searchLinkableBugs,
   updateBug,
 } from "./bugzilla.js";
 import { getSettings, saveSettings } from "./settings.js";
@@ -92,6 +93,9 @@ function registerHandlers(): void {
   );
   ipcMain.handle("bugs:search", (_event, search: BugSearch) =>
     searchBugs(search),
+  );
+  ipcMain.handle("bugs:searchLinkable", (_event, query: string) =>
+    searchLinkableBugs(query),
   );
   ipcMain.handle("bugs:get", (_event, id: number) => getBug(id));
   ipcMain.handle("user:current", () => getCurrentUser());

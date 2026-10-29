@@ -31,6 +31,7 @@ import {
   getCurrentUser,
   getProductDetailFields,
   searchBugs,
+  searchLinkableBugs,
   updateBug,
 } from "./bugzilla.js";
 
@@ -745,6 +746,96 @@ describe("Bugzilla API client", () => {
         remove: ["other@example.com"],
       },
     });
+  });
+
+  it("adds blocks and depends_on links through the update body", async () => {
+    fetchMock
+      .mockResolvedValueOnce(response({ bugs: [{ id: 42 }] }))
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar is clipped",
+              blocks: [50],
+              depends_on: [7],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(response({ bugs: { "42": { comments: [] } } }))
+      .mockResolvedValueOnce(response({ bugs: { "42": [] } }))
+      .mockResolvedValueOnce(emptyHistory())
+      .mockResolvedValueOnce(
+        response({
+          bugs: [
+            { id: 50, summary: "Release", assigned_to: "lead@example.com" },
+            { id: 7, summary: "Layout", assigned_to: "dev@example.com" },
+          ],
+        }),
+      );
+
+    const bug = await updateBug(42, {
+      blocks: { add: [50] },
+      dependsOn: { add: [7], remove: [9] },
+    });
+
+    expect(bug.blocks).toEqual([
+      { id: 50, summary: "Release", assignedTo: "lead@example.com" },
+    ]);
+    expect(bug.dependsOn).toEqual([
+      { id: 7, summary: "Layout", assignedTo: "dev@example.com" },
+    ]);
+    const [, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(JSON.parse(String(options.body))).toEqual({
+      ids: [42],
+      blocks: { add: [50] },
+      depends_on: { add: [7], remove: [9] },
+    });
+  });
+
+  it("searches linkable bugs by id or quicksearch", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({
+        bugs: [
+          {
+            id: 50,
+            summary: "Release blocker",
+            assigned_to: "lead@example.com",
+            assigned_to_detail: { real_name: "Lead" },
+          },
+        ],
+      }),
+    );
+
+    await expect(searchLinkableBugs("50")).resolves.toEqual([
+      {
+        id: 50,
+        summary: "Release blocker",
+        assignedTo: "lead@example.com",
+        assignedToName: "Lead",
+      },
+    ]);
+    const [idUrl] = fetchMock.mock.calls[0] as [URL];
+    expect(idUrl.pathname).toBe("/rest/bug");
+    expect(idUrl.searchParams.getAll("id")).toEqual(["50"]);
+    expect(idUrl.searchParams.get("quicksearch")).toBeNull();
+    expect(idUrl.searchParams.get("limit")).toBe("20");
+
+    fetchMock.mockResolvedValueOnce(
+      response({
+        bugs: [{ id: 7, summary: "Toolbar crash", assigned_to: "dev@example.com" }],
+      }),
+    );
+    await expect(searchLinkableBugs("toolbar")).resolves.toEqual([
+      { id: 7, summary: "Toolbar crash", assignedTo: "dev@example.com" },
+    ]);
+    const [textUrl] = fetchMock.mock.calls[1] as [URL];
+    expect(textUrl.searchParams.get("quicksearch")).toBe("toolbar");
+    expect(textUrl.searchParams.getAll("id")).toEqual([]);
+
+    await expect(searchLinkableBugs("  ")).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("reports a failed refresh after a successful update", async () => {

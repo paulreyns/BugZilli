@@ -12,6 +12,7 @@ import {
   Paperclip,
   Pencil,
   Plug,
+  Plus,
   Tag,
   UserRound,
 } from "lucide-react";
@@ -48,6 +49,10 @@ import {
 import { errorMessage } from "../../errors";
 import { formatDetailDate } from "../../utils/date";
 import { FieldControl } from "../field-controls/FieldControl";
+import {
+  AddLinkedBugDialog,
+  type LinkedBugRelation,
+} from "./AddLinkedBugDialog";
 import { AttachmentsTab } from "./AttachmentsTab";
 import { CommentsTab } from "./CommentsTab";
 import { FollowMenu } from "./FollowMenu";
@@ -70,7 +75,7 @@ interface BugDetailPageProps {
   onAddAttachment: (id: number, attachment: BugAttachmentDraft) => Promise<void>;
 }
 
-type PendingAction = "save" | "comment" | "attachment" | "follow";
+type PendingAction = "save" | "comment" | "attachment" | "follow" | "link";
 
 function resolutionLabel(value: string): string {
   return value && value !== "---" ? value : "";
@@ -103,6 +108,7 @@ export function BugDetailPage({
   } | null>(null);
   const [fieldCatalog, setFieldCatalog] = useState<DetailFieldOption[]>([]);
   const [currentUser, setCurrentUser] = useState<BugzillaUser>();
+  const [linking, setLinking] = useState(false);
   const pendingRef = useRef(false);
 
   useEffect(() => {
@@ -110,6 +116,7 @@ export function BugDetailPage({
     setDraft(null);
     setFeedback(null);
     setPending(null);
+    setLinking(false);
     pendingRef.current = false;
   }, [bug?.id]);
 
@@ -254,6 +261,26 @@ export function BugDetailPage({
           cc: follow ? { add: [login] } : { remove: [login] },
         });
         return follow ? "Now following this bug." : "Stopped following this bug.";
+      });
+    } catch {
+      // The banner already shows the Bugzilla error.
+    }
+  }
+
+  async function saveLinkedBug(relation: LinkedBugRelation, linkedBugId: number) {
+    if (!bug || pendingRef.current || editing) return;
+    try {
+      await run("link", async () => {
+        await onUpdateBug(
+          bug.id,
+          relation === "blocks"
+            ? { blocks: { add: [linkedBugId] } }
+            : { dependsOn: { add: [linkedBugId] } },
+        );
+        setLinking(false);
+        return relation === "blocks"
+          ? `Linked bug ${linkedBugId} as Blocks.`
+          : `Linked bug ${linkedBugId} as Depends On.`;
       });
     } catch {
       // The banner already shows the Bugzilla error.
@@ -426,7 +453,19 @@ export function BugDetailPage({
           </section>
 
           <section className="linked-bugs-section">
-            <h2>Linked Bugs</h2>
+            <div className="linked-bugs-header">
+              <h2>Linked Bugs</h2>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Add linked bug"
+                title="Add linked bug"
+                disabled={editing || pending !== null}
+                onClick={() => setLinking(true)}
+              >
+                <Plus size={16} aria-hidden="true" />
+              </button>
+            </div>
             <LinkedBugTable
               bugs={bug.blocks}
               label="Blocks"
@@ -438,6 +477,22 @@ export function BugDetailPage({
               onOpenBug={onOpenBug}
             />
           </section>
+
+          {linking && (
+            <AddLinkedBugDialog
+              bugId={bug.id}
+              excludeIds={[
+                ...bug.blocks.map((linked) => linked.id),
+                ...bug.dependsOn.map((linked) => linked.id),
+              ]}
+              disabled={editing}
+              pending={pending === "link"}
+              onSave={saveLinkedBug}
+              onClose={() => {
+                if (pending !== "link") setLinking(false);
+              }}
+            />
+          )}
 
           <section className="activity-section">
             <div className="tabs" role="tablist">

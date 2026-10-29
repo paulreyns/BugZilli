@@ -13,6 +13,8 @@ const api: BugzilliApi = {
   saveSettings: (update: SettingsUpdate) =>
     ipcRenderer.invoke("settings:save", update),
   searchBugs: (search: BugSearch) => ipcRenderer.invoke("bugs:search", search),
+  searchLinkableBugs: (query: string) =>
+    ipcRenderer.invoke("bugs:searchLinkable", query),
   getBug: (id: number) => ipcRenderer.invoke("bugs:get", id),
   getCurrentUser: () => ipcRenderer.invoke("user:current"),
   getProductDetailFields: (product: string) =>
