@@ -48,6 +48,11 @@ export interface Project {
   /** Ordered Issues table columns. Defaults to the built-in layout when omitted. */
   listColumns?: string[];
   /**
+   * Ordered Linked Bugs table columns (Blocks / Depends On). Defaults to the
+   * built-in layout when omitted.
+   */
+  linkedColumns?: string[];
+  /**
    * Bug field used to group Board columns (select / combo / lookup with
    * defined values). Defaults to status.
    */
@@ -178,12 +183,30 @@ export interface BugHistoryEntry {
   changes: BugHistoryChange[];
 }
 
+/**
+ * Related bug shown in Blocks / Depends On tables. Mirrors first-class `Bug`
+ * fields (minus description) so project-configured columns can render values,
+ * including custom fields via `extraFields`.
+ */
 export interface LinkedBug {
   id: number;
   /** Empty when Bugzilla did not return the bug (e.g. no access). */
   summary: string;
+  status: string;
+  resolution: string;
+  product: string;
+  component: string;
+  priority: string;
+  severity: string;
   assignedTo: string;
   assignedToName?: string;
+  creator: string;
+  creationTime: string;
+  lastChangeTime: string;
+  keywords: string[];
+  platform: string;
+  version: string;
+  extraFields?: Record<string, string>;
 }
 
 /** A user on a bug's CC (followers) list. */

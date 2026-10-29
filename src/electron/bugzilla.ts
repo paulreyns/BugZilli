@@ -11,6 +11,10 @@ import {
   cleanFilterRules,
   isOpenResolutionRule,
 } from "../shared/list-filters.js";
+import {
+  defaultLinkedColumns,
+  resolveLinkedColumns,
+} from "../shared/linked-columns.js";
 import { resolveListColumns } from "../shared/list-columns.js";
 import {
   MAX_ATTACHMENT_BYTES,
@@ -46,6 +50,28 @@ function includeFieldsForProject(project: Project): string {
   for (const key of resolveListColumns(project.listColumns)) {
     fields.add(bugzillaNameForKey(key));
   }
+  return [...fields].join(",");
+}
+
+/** REST include_fields for linked bug rows, driven by project column settings. */
+function includeFieldsForLinkedBugs(
+  product: string,
+  projects: Project[],
+): string {
+  const fields = new Set<string>(["id"]);
+  const matching = projects.filter(
+    (project) => project.product.trim() === product.trim(),
+  );
+  const columnSets =
+    matching.length > 0
+      ? matching.map((project) => resolveLinkedColumns(project.linkedColumns))
+      : [defaultLinkedColumns()];
+  for (const columns of columnSets) {
+    for (const key of columns) {
+      fields.add(bugzillaNameForKey(key));
+    }
+  }
+  if (fields.has("assigned_to")) fields.add("assigned_to_detail");
   return [...fields].join(",");
 }
 
@@ -277,12 +303,16 @@ function bugIds(value: unknown): number[] {
   return [...new Set(ids)];
 }
 
-async function getLinkedBugs(ids: number[]): Promise<Map<number, LinkedBug>> {
+async function getLinkedBugs(
+  ids: number[],
+  product: string,
+): Promise<Map<number, LinkedBug>> {
   const linked = new Map<number, LinkedBug>();
   if (ids.length === 0) return linked;
 
+  const { projects } = await getConnection();
   const params = new URLSearchParams({
-    include_fields: "id,summary,assigned_to,assigned_to_detail",
+    include_fields: includeFieldsForLinkedBugs(product, projects),
   });
   for (const id of ids) params.append("id", String(id));
   try {
@@ -298,8 +328,28 @@ async function getLinkedBugs(ids: number[]): Promise<Map<number, LinkedBug>> {
   return linked;
 }
 
+function emptyLinkedBug(id: number): LinkedBug {
+  return {
+    id,
+    summary: "",
+    status: "",
+    resolution: "",
+    product: "",
+    component: "",
+    priority: "",
+    severity: "",
+    assignedTo: "",
+    creator: "",
+    creationTime: "",
+    lastChangeTime: "",
+    keywords: [],
+    platform: "",
+    version: "",
+  };
+}
+
 function linkedBugsFor(ids: number[], linked: Map<number, LinkedBug>): LinkedBug[] {
-  return ids.map((id) => linked.get(id) ?? { id, summary: "", assignedTo: "" });
+  return ids.map((id) => linked.get(id) ?? emptyLinkedBug(id));
 }
 
 function mapFollower(value: JsonRecord): BugFollower | undefined {
@@ -448,13 +498,14 @@ async function loadBugDetail(id: number): Promise<BugDetail> {
     : [];
   const blockIds = bugIds(bugValue.blocks);
   const dependsOnIds = bugIds(bugValue.depends_on);
+  const product = text(bugValue.product);
   const [creatorNames, linkedBugs] = await Promise.all([
     getCreatorNames([
       ...visibleComments.map(({ creator }) => creator),
       ...mappedAttachments.map(({ creator }) => creator),
       ...mappedHistory.map(({ who }) => who),
     ]),
-    getLinkedBugs([...new Set([...blockIds, ...dependsOnIds])]),
+    getLinkedBugs([...new Set([...blockIds, ...dependsOnIds])], product),
   ]);
   const comments = visibleComments
     .map((comment) => {
@@ -534,8 +585,21 @@ function toLinkedBug(bug: Bug): LinkedBug {
   return {
     id: bug.id,
     summary: bug.summary,
+    status: bug.status,
+    resolution: bug.resolution,
+    product: bug.product,
+    component: bug.component,
+    priority: bug.priority,
+    severity: bug.severity,
     assignedTo: bug.assignedTo,
     ...(bug.assignedToName ? { assignedToName: bug.assignedToName } : {}),
+    creator: bug.creator,
+    creationTime: bug.creationTime,
+    lastChangeTime: bug.lastChangeTime,
+    keywords: bug.keywords,
+    platform: bug.platform,
+    version: bug.version,
+    ...(bug.extraFields ? { extraFields: bug.extraFields } : {}),
   };
 }
 
