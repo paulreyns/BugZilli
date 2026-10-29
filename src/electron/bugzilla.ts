@@ -517,10 +517,15 @@ async function loadBugDetail(id: number): Promise<BugDetail> {
         Date.parse(right.creationTime) - Date.parse(left.creationTime),
     );
 
-  const attachments = mappedAttachments.map((attachment) => {
-    const creatorName = creatorNames.get(attachment.creator.toLowerCase());
-    return creatorName ? { ...attachment, creatorName } : attachment;
-  });
+  const attachments = mappedAttachments
+    .map((attachment) => {
+      const creatorName = creatorNames.get(attachment.creator.toLowerCase());
+      return creatorName ? { ...attachment, creatorName } : attachment;
+    })
+    .sort(
+      (left, right) =>
+        Date.parse(right.creationTime) - Date.parse(left.creationTime),
+    );
 
   const history = mappedHistory
     .map((entry) => {

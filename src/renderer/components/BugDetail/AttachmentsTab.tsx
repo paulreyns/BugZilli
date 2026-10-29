@@ -30,6 +30,11 @@ export function AttachmentsTab({
   onSaveAttachment: (id: number) => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const sortedAttachments = [...attachments].sort(
+    (left, right) =>
+      Date.parse(right.creationTime) - Date.parse(left.creationTime),
+  );
+
   return (
     <div className="attachments" role="tabpanel" hidden={hidden}>
       <AttachmentComposer
@@ -41,7 +46,7 @@ export function AttachmentsTab({
       {attachments.length === 0 ? (
         <TabEmpty icon={<Paperclip size={28} />} text="No attachments." />
       ) : (
-        attachments.map((attachment) => (
+        sortedAttachments.map((attachment) => (
           <div className="attachment" key={attachment.id}>
             <button
               type="button"
