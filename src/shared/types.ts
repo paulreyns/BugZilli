@@ -240,6 +240,16 @@ export interface BugUpdate {
     add?: string[];
     remove?: string[];
   };
+  /** Add and/or remove bug IDs on the Bugzilla `blocks` field. */
+  blocks?: {
+    add?: number[];
+    remove?: number[];
+  };
+  /** Add and/or remove bug IDs on the Bugzilla `depends_on` field. */
+  dependsOn?: {
+    add?: number[];
+    remove?: number[];
+  };
 }
 
 export interface BugCommentDraft {
@@ -262,6 +272,8 @@ export interface BugzilliApi {
   getSettings(): Promise<AppSettings>;
   saveSettings(update: SettingsUpdate): Promise<AppSettings>;
   searchBugs(search: BugSearch): Promise<Bug[]>;
+  /** Find bugs by id or summary text for the linked-bug picker. */
+  searchLinkableBugs(query: string): Promise<LinkedBug[]>;
   getBug(id: number): Promise<BugDetail>;
   /** Current user identified from the configured User Email Address. */
   getCurrentUser(): Promise<BugzillaUser>;
