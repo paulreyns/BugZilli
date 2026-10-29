@@ -30,6 +30,7 @@ import {
   type BugUpdate,
   type Project,
 } from "../shared/types.js";
+import { readCachedBug, writeCachedBug } from "./bug-cache.js";
 import { getConnection } from "./settings.js";
 
 type JsonRecord = Record<string, unknown>;
@@ -357,8 +358,55 @@ export async function getCurrentUser(): Promise<BugzillaUser> {
   };
 }
 
-export async function getBug(id: number): Promise<BugDetail> {
+function sameChangeTime(cached: string, remote: string): boolean {
+  if (cached === remote) return true;
+  const cachedMs = Date.parse(cached);
+  const remoteMs = Date.parse(remote);
+  return Number.isFinite(cachedMs) && cachedMs === remoteMs;
+}
+
+/** Lightweight check used to decide whether a stored bug detail is still current. */
+async function readRemoteChangeTime(id: number): Promise<string | undefined> {
+  try {
+    const params = new URLSearchParams({ include_fields: "last_change_time" });
+    const payload = await request(`bug/${id}`, { params });
+    const bugValue = Array.isArray(payload.bugs)
+      ? (payload.bugs[0] as JsonRecord | undefined)
+      : undefined;
+    if (!bugValue) return undefined;
+    const changed = text(bugValue.last_change_time);
+    return changed || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function getBug(
+  id: number,
+  options?: { bypassCache: boolean },
+): Promise<BugDetail> {
   assertBugId(id);
+  const { baseUrl } = await getConnection();
+  if (options?.bypassCache !== true) {
+    const cached = await readCachedBug(baseUrl, id);
+    if (cached?.lastChangeTime) {
+      const remoteChangeTime = await readRemoteChangeTime(id);
+      if (remoteChangeTime && sameChangeTime(cached.lastChangeTime, remoteChangeTime)) {
+        return cached;
+      }
+    }
+  }
+
+  const detail = await loadBugDetail(id);
+  try {
+    await writeCachedBug(baseUrl, detail);
+  } catch (error) {
+    console.error(`Could not store bug ${id} locally.`, error);
+  }
+  return detail;
+}
+
+async function loadBugDetail(id: number): Promise<BugDetail> {
   // Fetch all scalar fields so product-configured Details fields (including
   // custom Bugzilla fields) are available without a second round-trip.
   const [bugPayload, commentPayload, attachmentPayload, historyPayload] =
@@ -615,7 +663,9 @@ function bugzillaUpdateBody(id: number, update: BugUpdate): JsonRecord {
 
 async function refreshBug(id: number, action: string): Promise<BugDetail> {
   try {
-    return await getBug(id);
+    // The mutation just changed the bug, so skip the timestamp check and
+    // replace the stored copy with a full fetch.
+    return await getBug(id, { bypassCache: true });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "The bug could not be refreshed.";

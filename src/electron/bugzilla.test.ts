@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./settings.js", () => ({
@@ -23,6 +26,8 @@ vi.mock("./settings.js", () => ({
   }),
 }));
 
+import { setBugCacheDirectory } from "./bug-cache.js";
+import { getConnection } from "./settings.js";
 import {
   addAttachment,
   addComment,
@@ -50,9 +55,69 @@ function emptyHistory(id = 42): Response {
   return response({ bugs: [{ id, history: [] }] });
 }
 
+const getConnectionMock = vi.mocked(getConnection);
+
+function mockFullBug(options?: {
+  id?: number;
+  summary?: string;
+  lastChangeTime?: string;
+  comment?: string;
+}): void {
+  const id = options?.id ?? 42;
+  const summary = options?.summary ?? "Toolbar is clipped";
+  const lastChangeTime = options?.lastChangeTime ?? "2026-10-18T10:00:00Z";
+  fetchMock
+    .mockResolvedValueOnce(
+      response({
+        bugs: [
+          {
+            id,
+            summary,
+            status: "NEW",
+            last_change_time: lastChangeTime,
+          },
+        ],
+      }),
+    )
+    .mockResolvedValueOnce(
+      response({
+        bugs: {
+          [String(id)]: {
+            comments: [
+              {
+                id: 1,
+                creator: "reporter",
+                creation_time: "2024-01-01T09:00:00Z",
+                text: "Steps",
+              },
+              ...(options?.comment
+                ? [
+                    {
+                      id: 2,
+                      creator: "dev",
+                      creation_time: "2024-01-02T09:00:00Z",
+                      text: options.comment,
+                    },
+                  ]
+                : []),
+            ],
+          },
+        },
+      }),
+    )
+    .mockResolvedValueOnce(response({ bugs: { [String(id)]: [] } }))
+    .mockResolvedValueOnce(emptyHistory(id));
+  if (options?.comment) {
+    fetchMock.mockResolvedValueOnce(
+      response({ users: [{ name: "dev", real_name: "Dev Name" }] }),
+    );
+  }
+}
+
 describe("Bugzilla API client", () => {
   beforeEach(() => {
     fetchMock.mockReset();
+    setBugCacheDirectory(undefined);
   });
 
   it("searches within the configured product and maps Bugzilla fields", async () => {
@@ -1049,5 +1114,163 @@ describe("Bugzilla API client", () => {
 
     await expect(getAttachmentFile(0)).rejects.toThrow("Invalid attachment.");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("stores a fetched bug and reuses it when last_change_time matches", async () => {
+    mockFullBug({ summary: "Cached summary", comment: "Confirmed" });
+
+    const first = await getBug(42);
+    expect(first.summary).toBe("Cached summary");
+    expect(first.description).toBe("Steps");
+    expect(first.comments.map((comment) => comment.text)).toEqual(["Confirmed"]);
+    const fetchesForFullBug = fetchMock.mock.calls.length;
+
+    fetchMock.mockResolvedValueOnce(
+      response({
+        bugs: [{ id: 42, last_change_time: "2026-10-18T10:00:00Z" }],
+      }),
+    );
+    const second = await getBug(42);
+
+    expect(second).toEqual(first);
+    expect(fetchMock.mock.calls.length).toBe(fetchesForFullBug + 1);
+    const [url] = fetchMock.mock.calls.at(-1) as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/bug/42");
+    expect(url.searchParams.get("include_fields")).toBe("last_change_time");
+  });
+
+  it("treats an equivalent timestamp as unchanged", async () => {
+    mockFullBug({ lastChangeTime: "2026-10-18T10:00:00Z" });
+    const first = await getBug(42);
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(
+      response({
+        bugs: [{ id: 42, last_change_time: "2026-10-18T10:00:00.000Z" }],
+      }),
+    );
+
+    await expect(getBug(42)).resolves.toEqual(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches a new copy when the cached bug is out of date", async () => {
+    mockFullBug({
+      summary: "Old summary",
+      lastChangeTime: "2026-10-18T10:00:00Z",
+      comment: "Old",
+    });
+    await getBug(42);
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(
+      response({
+        bugs: [{ id: 42, last_change_time: "2026-10-19T08:00:00Z" }],
+      }),
+    );
+    mockFullBug({
+      summary: "New summary",
+      lastChangeTime: "2026-10-19T08:00:00Z",
+      comment: "New",
+    });
+
+    const bug = await getBug(42);
+
+    expect(bug.summary).toBe("New summary");
+    expect(bug.lastChangeTime).toBe("2026-10-19T08:00:00Z");
+    expect(bug.comments.map((comment) => comment.text)).toEqual(["New"]);
+    const [freshnessUrl] = fetchMock.mock.calls[0] as [URL];
+    expect(freshnessUrl.pathname).toBe("/rest/bug/42");
+    expect(freshnessUrl.searchParams.get("include_fields")).toBe(
+      "last_change_time",
+    );
+    const [fullUrl] = fetchMock.mock.calls[1] as [URL];
+    expect(fullUrl.pathname).toBe("/rest/bug/42");
+    expect(fullUrl.searchParams.has("include_fields")).toBe(false);
+  });
+
+  it("fetches a full copy when the freshness check fails", async () => {
+    mockFullBug({ summary: "Cached" });
+    await getBug(42);
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(
+      response({ error: true, message: "unavailable" }, false),
+    );
+    mockFullBug({
+      summary: "Fresh",
+      lastChangeTime: "2026-10-20T00:00:00Z",
+    });
+
+    await expect(getBug(42)).resolves.toMatchObject({ summary: "Fresh" });
+  });
+
+  it("reads a cached bug from disk after the in-memory copy is dropped", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "bugzilli-bug-cache-"));
+    setBugCacheDirectory(directory);
+    try {
+      mockFullBug({ summary: "From disk", comment: "Kept" });
+      const first = await getBug(42);
+      setBugCacheDirectory(directory);
+      fetchMock.mockReset();
+      fetchMock.mockResolvedValueOnce(
+        response({
+          bugs: [{ id: 42, last_change_time: "2026-10-18T10:00:00Z" }],
+        }),
+      );
+
+      await expect(getBug(42)).resolves.toEqual(first);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      setBugCacheDirectory(undefined);
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not reuse a cached bug from a different Bugzilla instance", async () => {
+    mockFullBug({ summary: "First instance" });
+    await getBug(42);
+    const current = await getConnection();
+    getConnectionMock.mockResolvedValue({
+      ...current,
+      baseUrl: "https://other.example.com",
+    });
+    try {
+      fetchMock.mockReset();
+      mockFullBug({ summary: "Other instance", comment: "Elsewhere" });
+      const bug = await getBug(42);
+      expect(bug.summary).toBe("Other instance");
+      expect(bug.comments.map((comment) => comment.text)).toEqual(["Elsewhere"]);
+      const [url] = fetchMock.mock.calls[0] as [URL];
+      expect(url.origin).toBe("https://other.example.com");
+      expect(url.searchParams.has("include_fields")).toBe(false);
+    } finally {
+      getConnectionMock.mockResolvedValue(current);
+    }
+  });
+
+  it("replaces the cached bug after an update", async () => {
+    mockFullBug({ summary: "Old", lastChangeTime: "2026-10-18T10:00:00Z" });
+    await getBug(42);
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(response({ bugs: [{ id: 42, changes: {} }] }));
+    mockFullBug({ summary: "Edited", lastChangeTime: "2026-10-19T12:00:00Z" });
+
+    const edited = await updateBug(42, { summary: "Edited" });
+
+    expect(edited.summary).toBe("Edited");
+    const detailGets = (fetchMock.mock.calls as [URL, RequestInit | undefined][])
+      .filter(
+        ([url, init]) =>
+          (init?.method ?? "GET") === "GET" && url.pathname === "/rest/bug/42",
+      );
+    expect(detailGets[0]?.[0].searchParams.has("include_fields")).toBe(false);
+
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(
+      response({
+        bugs: [{ last_change_time: "2026-10-19T12:00:00Z" }],
+      }),
+    );
+    const opened = await getBug(42);
+    expect(opened.summary).toBe("Edited");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from "electron";
 import { access, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { setBugCacheDirectory } from "./bug-cache.js";
 import {
   addAttachment,
   addComment,
@@ -140,6 +141,7 @@ function registerHandlers(): void {
 }
 
 void app.whenReady().then(() => {
+  setBugCacheDirectory(path.join(app.getPath("userData"), "bug-cache"));
   if (process.platform === "darwin") {
     app.dock?.setIcon(getAppIconPath());
   }
