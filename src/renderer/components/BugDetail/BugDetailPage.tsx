@@ -8,6 +8,7 @@ import {
   History,
   Link,
   MessageSquare,
+  Minus,
   Monitor,
   Paperclip,
   Pencil,
@@ -287,6 +288,28 @@ export function BugDetailPage({
     }
   }
 
+  async function removeLinkedBug(
+    relation: LinkedBugRelation,
+    linkedBugId: number,
+  ) {
+    if (!bug || pendingRef.current || editing) return;
+    try {
+      await run("link", async () => {
+        await onUpdateBug(
+          bug.id,
+          relation === "blocks"
+            ? { blocks: { remove: [linkedBugId] } }
+            : { dependsOn: { remove: [linkedBugId] } },
+        );
+        return relation === "blocks"
+          ? `Removed bug ${linkedBugId} from Blocks.`
+          : `Removed bug ${linkedBugId} from Depends On.`;
+      });
+    } catch {
+      // The banner already shows the Bugzilla error.
+    }
+  }
+
   if (loading) {
     return (
       <main className="page detail-page">
@@ -469,12 +492,18 @@ export function BugDetailPage({
             <LinkedBugTable
               bugs={bug.blocks}
               label="Blocks"
+              relation="blocks"
+              disabled={editing || pending !== null}
               onOpenBug={onOpenBug}
+              onUnlink={removeLinkedBug}
             />
             <LinkedBugTable
               bugs={bug.dependsOn}
               label="Depends On"
+              relation="dependsOn"
+              disabled={editing || pending !== null}
               onOpenBug={onOpenBug}
+              onUnlink={removeLinkedBug}
             />
           </section>
 
@@ -830,11 +859,17 @@ function DetailRow({
 function LinkedBugTable({
   bugs,
   label,
+  relation,
+  disabled = false,
   onOpenBug,
+  onUnlink,
 }: {
   bugs: LinkedBug[];
   label: string;
+  relation: LinkedBugRelation;
+  disabled?: boolean;
   onOpenBug: (id: number) => void;
+  onUnlink: (relation: LinkedBugRelation, linkedBugId: number) => void;
 }) {
   if (bugs.length === 0) {
     return;
@@ -849,6 +884,9 @@ function LinkedBugTable({
               <th scope="col">Id</th>
               <th scope="col">Summary</th>
               <th scope="col">Assignee</th>
+              <th scope="col" className="linked-bug-unlink-heading">
+                <span className="visually-hidden">Remove link</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -867,6 +905,21 @@ function LinkedBugTable({
                 <td className="linked-bug-id">{linked.id}</td>
                 <td className="linked-bug-summary">{linked.summary || "—"}</td>
                 <td>{linked.assignedToName || linked.assignedTo || "Unassigned"}</td>
+                <td className="linked-bug-unlink">
+                  <button
+                    type="button"
+                    className="icon-button linked-bug-unlink-button"
+                    aria-label={`Remove link to bug ${linked.id}`}
+                    title="Remove link"
+                    disabled={disabled}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onUnlink(relation, linked.id);
+                    }}
+                  >
+                    <Minus size={16} aria-hidden="true" />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

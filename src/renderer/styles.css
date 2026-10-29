@@ -16,6 +16,18 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
   margin: 0;
   min-width: 980px;
@@ -1522,13 +1534,46 @@ select.detail-control {
   overflow-wrap: anywhere;
 }
 
+.linked-bugs-table th.linked-bug-unlink-heading,
+.linked-bugs-table td.linked-bug-unlink {
+  width: 1%;
+  padding-left: 4px;
+  padding-right: 8px;
+  text-align: center;
+}
+
+.linked-bugs-table .linked-bug-unlink-button {
+  color: #626f86;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease, background 100ms ease, color 100ms ease;
+}
+
+.linked-bugs-table tbody tr:hover .linked-bug-unlink-button:not(:disabled),
+.linked-bugs-table tbody tr:focus-within .linked-bug-unlink-button:not(:disabled),
+.linked-bugs-table .linked-bug-unlink-button:focus-visible:not(:disabled) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.linked-bugs-table .linked-bug-unlink-button:hover:not(:disabled),
+.linked-bugs-table .linked-bug-unlink-button:focus-visible:not(:disabled) {
+  color: #ae2a19;
+  background: #ffeceb;
+}
+
+.linked-bugs-table .linked-bug-unlink-button:disabled {
+  cursor: default;
+}
+
 .linked-bugs-table tbody tr {
   cursor: pointer;
   transition: background 100ms ease;
 }
 
 .linked-bugs-table tbody tr:hover,
-.linked-bugs-table tbody tr:focus {
+.linked-bugs-table tbody tr:focus,
+.linked-bugs-table tbody tr:focus-within {
   outline: 0;
   background: #f4f8ff;
 }
