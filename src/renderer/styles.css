@@ -1515,7 +1515,7 @@ select.detail-control {
 }
 
 .linked-bugs-table td {
-  padding: 9px 12px;
+  padding: 4px 12px;
   border-top: 1px solid #ebecf0;
   color: #44546f;
   white-space: nowrap;
