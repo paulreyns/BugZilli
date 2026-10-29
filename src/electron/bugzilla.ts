@@ -1,3 +1,4 @@
+import { buildBugCreate } from "../shared/bug-create.js";
 import { parseBugId } from "../shared/bugId.js";
 import {
   baseBugFields,
@@ -20,6 +21,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   type Bug,
   type BugAttachment,
+  type BugCreate,
   type BugAttachmentDraft,
   type BugComment,
   type BugCommentDraft,
@@ -32,6 +34,7 @@ import {
   type LinkedBug,
   type BugSearch,
   type BugUpdate,
+  type DetailFieldType,
   type Project,
 } from "../shared/types.js";
 import { readCachedBug, writeCachedBug } from "./bug-cache.js";
@@ -185,8 +188,12 @@ async function request(path: string, init?: BugzillaRequest): Promise<JsonRecord
 
   const payload = (await response.json().catch(() => ({}))) as JsonRecord;
   if (!response.ok || payload.error === true) {
-    const message =
+    const fieldName = text(payload.field) || text(payload.param);
+    let message =
       text(payload.message) || `Bugzilla request failed (${response.status}).`;
+    if (fieldName && !message.toLowerCase().includes(fieldName.toLowerCase())) {
+      message = `${message} (${fieldName})`;
+    }
     throw new Error(message);
   }
   return payload;
@@ -762,6 +769,57 @@ export async function getProductDetailFields(
   }
 
   return catalogFromFieldApi(fields, trimmed);
+}
+
+function normalizeBugCreate(draft: BugCreate): BugCreate {
+  if (!draft || typeof draft !== "object") {
+    throw new Error("Bug details are missing.");
+  }
+  const extraFields: Record<string, string> = {};
+  if (draft.extraFields !== undefined && draft.extraFields !== null) {
+    if (typeof draft.extraFields !== "object" || Array.isArray(draft.extraFields)) {
+      throw new Error("Custom fields must be a map of text values.");
+    }
+    for (const [key, value] of Object.entries(draft.extraFields)) {
+      if (typeof value !== "string") {
+        throw new Error("Custom field values must be text.");
+      }
+      extraFields[key] = value;
+    }
+  }
+  const asText = (value: unknown): string => (typeof value === "string" ? value : "");
+  return {
+    summary: asText(draft.summary),
+    description: asText(draft.description),
+    status: asText(draft.status),
+    resolution: asText(draft.resolution),
+    assignedTo: asText(draft.assignedTo),
+    priority: asText(draft.priority),
+    severity: asText(draft.severity),
+    component: asText(draft.component),
+    version: asText(draft.version),
+    platform: asText(draft.platform),
+    keywords: asText(draft.keywords),
+    extraFields,
+  };
+}
+
+export async function createBug(
+  product: string,
+  draft: BugCreate,
+  fieldTypes?: Record<string, DetailFieldType>,
+): Promise<BugDetail> {
+  const types =
+    fieldTypes && typeof fieldTypes === "object" && !Array.isArray(fieldTypes)
+      ? fieldTypes
+      : {};
+  const body = buildBugCreate(product, normalizeBugCreate(draft), types);
+  const payload = await request("bug", { method: "POST", body });
+  const id = number(payload.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error("Bugzilla did not return a bug number.");
+  }
+  return refreshBug(id, "Created");
 }
 
 export async function updateBug(id: number, update: BugUpdate): Promise<BugDetail> {

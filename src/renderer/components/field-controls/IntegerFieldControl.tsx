@@ -1,4 +1,5 @@
 import type { FieldControlProps } from "./FieldControlProps";
+import { fieldAria, fieldControlClass, FieldShell } from "./FieldShell";
 
 export function IntegerFieldControl({
   id,
@@ -7,21 +8,29 @@ export function IntegerFieldControl({
   value,
   disabled,
   onChange,
+  required,
+  invalid,
+  error,
 }: FieldControlProps) {
   return (
-    <div className="detail-row">
-      <label className="detail-label" htmlFor={id}>
-        {icon} {label}
-      </label>
+    <FieldShell
+      id={id}
+      label={label}
+      icon={icon}
+      required={required}
+      invalid={invalid}
+      error={error}
+    >
       <input
         id={id}
-        className="detail-control"
+        className={fieldControlClass(invalid)}
         type="number"
         inputMode="numeric"
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
+        {...fieldAria(id, { required, invalid, error })}
       />
-    </div>
+    </FieldShell>
   );
 }

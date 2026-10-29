@@ -1,4 +1,5 @@
 import type { FieldControlProps } from "./FieldControlProps";
+import { fieldAria, fieldControlClass, FieldShell } from "./FieldShell";
 
 export function SelectFieldControl({
   id,
@@ -8,21 +9,29 @@ export function SelectFieldControl({
   values = [],
   disabled,
   onChange,
+  required,
+  invalid,
+  error,
 }: FieldControlProps) {
   const options =
     value && !values.includes(value) ? [value, ...values] : values;
 
   return (
-    <div className="detail-row">
-      <label className="detail-label" htmlFor={id}>
-        {icon} {label}
-      </label>
+    <FieldShell
+      id={id}
+      label={label}
+      icon={icon}
+      required={required}
+      invalid={invalid}
+      error={error}
+    >
       <select
         id={id}
-        className="detail-control"
+        className={fieldControlClass(invalid)}
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
+        {...fieldAria(id, { required, invalid, error })}
       >
         <option value="">—</option>
         {options.map((option) => (
@@ -31,6 +40,6 @@ export function SelectFieldControl({
           </option>
         ))}
       </select>
-    </div>
+    </FieldShell>
   );
 }

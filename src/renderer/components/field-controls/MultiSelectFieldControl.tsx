@@ -1,5 +1,6 @@
 import { parseKeywords } from "../../../shared/bug-update";
 import type { FieldControlProps } from "./FieldControlProps";
+import { fieldAria, FieldShell } from "./FieldShell";
 
 export function MultiSelectFieldControl({
   id,
@@ -9,18 +10,31 @@ export function MultiSelectFieldControl({
   values = [],
   disabled,
   onChange,
+  required,
+  invalid,
+  error,
 }: FieldControlProps) {
   const selected = new Set(parseKeywords(value));
 
   return (
-    <div className="detail-row">
-      <span className="detail-label" id={`${id}-label`}>
-        {icon} {label}
-      </span>
+    <FieldShell
+      id={id}
+      label={label}
+      icon={icon}
+      required={required}
+      invalid={invalid}
+      error={error}
+      labelAs="span"
+    >
       <div
-        className="detail-multiselect"
+        className={
+          invalid
+            ? "detail-multiselect detail-multiselect-invalid"
+            : "detail-multiselect"
+        }
         role="group"
         aria-labelledby={`${id}-label`}
+        {...fieldAria(id, { required, invalid, error })}
       >
         {values.map((option) => {
           const checked = selected.has(option);
@@ -42,6 +56,6 @@ export function MultiSelectFieldControl({
           );
         })}
       </div>
-    </div>
+    </FieldShell>
   );
 }

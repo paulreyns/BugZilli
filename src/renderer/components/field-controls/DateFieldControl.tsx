@@ -1,5 +1,6 @@
 import { toDateInputValue } from "../../utils/date";
 import type { FieldControlProps } from "./FieldControlProps";
+import { fieldAria, fieldControlClass, FieldShell } from "./FieldShell";
 
 export function DateFieldControl({
   id,
@@ -8,20 +9,28 @@ export function DateFieldControl({
   value,
   disabled,
   onChange,
+  required,
+  invalid,
+  error,
 }: FieldControlProps) {
   return (
-    <div className="detail-row">
-      <label className="detail-label" htmlFor={id}>
-        {icon} {label}
-      </label>
+    <FieldShell
+      id={id}
+      label={label}
+      icon={icon}
+      required={required}
+      invalid={invalid}
+      error={error}
+    >
       <input
         id={id}
-        className="detail-control"
+        className={fieldControlClass(invalid)}
         type="date"
         value={toDateInputValue(value)}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
+        {...fieldAria(id, { required, invalid, error })}
       />
-    </div>
+    </FieldShell>
   );
 }

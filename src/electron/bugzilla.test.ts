@@ -41,6 +41,7 @@ import {
   getAttachmentFile,
   getBug,
   getCurrentUser,
+  createBug,
   getProductDetailFields,
   searchBugs,
   searchLinkableBugs,
@@ -760,6 +761,73 @@ describe("Bugzilla API client", () => {
     await expect(searchBugs({ projectId: "browser" })).rejects.toThrow(
       "Invalid API key",
     );
+  });
+
+  it("files a bug with POST and returns the created bug", async () => {
+    fetchMock.mockResolvedValueOnce(response({ id: 99 }));
+    mockFullBug({ id: 99, summary: "Toolbar clips" });
+
+    const bug = await createBug("Browser", {
+      summary: "Toolbar clips",
+      description: "Steps",
+      status: "NEW",
+      resolution: "",
+      assignedTo: "dev@example.com",
+      priority: "P2",
+      severity: "",
+      component: "UI",
+      version: "1.0",
+      platform: "",
+      keywords: "regression, crash",
+      extraFields: { whiteboard: "triage", cf_flags: "a, b" },
+    }, { cf_flags: "multiselect" });
+
+    expect(bug.id).toBe(99);
+    expect(bug.summary).toBe("Toolbar clips");
+    expect(bug.description).toBe("Steps");
+    const [url, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe("/rest/bug");
+    expect(url.searchParams.get("api_key")).toBe("secret");
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(String(options.body))).toEqual({
+      product: "Browser",
+      summary: "Toolbar clips",
+      description: "Steps",
+      status: "NEW",
+      assigned_to: "dev@example.com",
+      priority: "P2",
+      component: "UI",
+      version: "1.0",
+      keywords: ["regression", "crash"],
+      whiteboard: "triage",
+      cf_flags: ["a", "b"],
+    });
+  });
+
+  it("names the Bugzilla field when a create error identifies one", async () => {
+    fetchMock.mockResolvedValue(
+      response(
+        { error: true, message: "A value is required.", field: "cf_blocking" },
+        false,
+      ),
+    );
+
+    await expect(
+      createBug("Browser", {
+        summary: "Toolbar clips",
+        description: "",
+        status: "",
+        resolution: "",
+        assignedTo: "",
+        priority: "",
+        severity: "",
+        component: "UI",
+        version: "1.0",
+        platform: "",
+        keywords: "",
+        extraFields: {},
+      }),
+    ).rejects.toThrow("A value is required. (cf_blocking)");
   });
 
   it("updates a bug with PUT and returns the refreshed bug", async () => {

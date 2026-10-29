@@ -180,6 +180,7 @@ describe("detail fields", () => {
           name: "cf_blocking",
           display_name: "Blocking",
           type: 2,
+          is_mandatory: true,
           values: [
             { name: "yes", sort_key: 1 },
             { name: "no", sort_key: 2 },
@@ -203,6 +204,7 @@ describe("detail fields", () => {
           name: "component",
           display_name: "Component",
           type: 2,
+          is_mandatory: true,
           value_field: "product",
           values: [
             {
@@ -283,6 +285,10 @@ describe("detail fields", () => {
     expect(byKey.get("component")).toMatchObject({
       type: "select",
       values: ["UI", "Networking"],
+      required: true,
     });
+    expect(byKey.get("cf_blocking")?.required).toBe(true);
+    expect(byKey.get("priority")?.required).toBeUndefined();
+    expect(byKey.get("summary")?.required).toBeUndefined();
   });
 });

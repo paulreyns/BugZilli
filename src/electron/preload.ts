@@ -2,9 +2,11 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   BugAttachmentDraft,
   BugCommentDraft,
+  BugCreate,
   BugSearch,
   BugUpdate,
   BugzilliApi,
+  DetailFieldType,
   SettingsUpdate,
 } from "../shared/types.js";
 
@@ -21,6 +23,11 @@ const api: BugzilliApi = {
     ipcRenderer.invoke("bugs:productFields", product),
   updateBug: (id: number, update: BugUpdate) =>
     ipcRenderer.invoke("bugs:update", id, update),
+  createBug: (
+    product: string,
+    draft: BugCreate,
+    fieldTypes?: Record<string, DetailFieldType>,
+  ) => ipcRenderer.invoke("bugs:create", product, draft, fieldTypes),
   addComment: (id: number, comment: BugCommentDraft) =>
     ipcRenderer.invoke("bugs:comment", id, comment),
   addAttachment: (id: number, attachment: BugAttachmentDraft) =>

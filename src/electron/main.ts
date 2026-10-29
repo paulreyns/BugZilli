@@ -5,6 +5,7 @@ import { setBugCacheDirectory } from "./bug-cache.js";
 import {
   addAttachment,
   addComment,
+  createBug,
   getAttachmentFile,
   getBug,
   getCurrentUser,
@@ -17,8 +18,10 @@ import { getSettings, saveSettings } from "./settings.js";
 import type {
   BugAttachmentDraft,
   BugCommentDraft,
+  BugCreate,
   BugSearch,
   BugUpdate,
+  DetailFieldType,
   SettingsUpdate,
 } from "../shared/types.js";
 
@@ -105,6 +108,15 @@ function registerHandlers(): void {
   );
   ipcMain.handle("bugs:update", (_event, id: number, update: BugUpdate) =>
     updateBug(id, update),
+  );
+  ipcMain.handle(
+    "bugs:create",
+    (
+      _event,
+      product: string,
+      draft: BugCreate,
+      fieldTypes?: Record<string, DetailFieldType>,
+    ) => createBug(product, draft, fieldTypes),
   );
   ipcMain.handle("bugs:comment", (_event, id: number, comment: BugCommentDraft) =>
     addComment(id, comment),

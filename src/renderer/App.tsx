@@ -19,6 +19,7 @@ import type {
   SavedFilter,
   SettingsUpdate,
 } from "../shared/types";
+import { AddBugPage } from "./components/AddBugPage";
 import { BugDetailPage } from "./components/BugDetail/BugDetailPage";
 import { BugsPage } from "./components/BugsPage";
 import { GoToBugDialog } from "./components/GoToBugDialog";
@@ -97,6 +98,7 @@ export default function App() {
   const [detailError, setDetailError] = useState("");
   const [startupError, setStartupError] = useState("");
   const [goToBugOpen, setGoToBugOpen] = useState(false);
+  const [creatingBug, setCreatingBug] = useState(false);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -220,6 +222,7 @@ export default function App() {
     setSelectedBug(undefined);
     setDetailError("");
     setQuery("");
+    setCreatingBug(false);
   }
 
   async function openBug(id: number) {
@@ -357,6 +360,21 @@ export default function App() {
         onAddAttachment={addAttachment}
       />
     );
+  } else if (creatingBug && activeProject) {
+    content = (
+      <AddBugPage
+        product={activeProject.product}
+        {...(activeProject.detailFields
+          ? { detailFields: activeProject.detailFields }
+          : {})}
+        onBack={() => setCreatingBug(false)}
+        onCreated={(bug) => {
+          setCreatingBug(false);
+          setDetailError("");
+          setSelectedBug(bug);
+        }}
+      />
+    );
   } else if (page === "settings" || globalSettings || !activeProject) {
     content = (
       <SettingsPage
@@ -402,6 +420,7 @@ export default function App() {
           void deleteProjectFilter(activeProject.id, filterId);
         }}
         onSelectBug={(id) => void openBug(id)}
+        onAddBug={() => setCreatingBug(true)}
       />
     );
   }
@@ -417,6 +436,7 @@ export default function App() {
           setGlobalSettings(true);
           setPage("settings");
           setSelectedBug(undefined);
+          setCreatingBug(false);
         }}
       />
       <div className="content">{content}</div>
@@ -426,6 +446,7 @@ export default function App() {
           onClose={() => setGoToBugOpen(false)}
           onGo={(id) => {
             setGoToBugOpen(false);
+            setCreatingBug(false);
             void openBug(id);
           }}
         />

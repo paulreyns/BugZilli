@@ -1,4 +1,4 @@
-import { AlertCircle, RefreshCw, Search } from "lucide-react";
+import { AlertCircle, Plus, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 import { ALL_FILTER_ID } from "../../shared/list-filters";
 import type { Bug, Project, SavedFilter } from "../../shared/types";
@@ -24,6 +24,7 @@ interface BugsPageProps {
   onUpdateFilter: (filter: SavedFilter) => void;
   onDeleteFilter: (filterId: string) => void;
   onSelectBug: (id: number) => void;
+  onAddBug: () => void;
 }
 
 export function BugsPage(props: BugsPageProps) {
@@ -43,6 +44,7 @@ export function BugsPage(props: BugsPageProps) {
     onUpdateFilter,
     onDeleteFilter,
     onSelectBug,
+    onAddBug,
   } = props;
   const [filterDialog, setFilterDialog] = useState<
     { mode: "add" } | { mode: "edit"; filter: SavedFilter } | null
@@ -63,15 +65,21 @@ export function BugsPage(props: BugsPageProps) {
             {project.product} · {bugs.length} issues
           </p>
         </div>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={onRefresh}
-          disabled={loading}
-        >
-          <RefreshCw size={15} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+        <div className="page-header-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onRefresh}
+            disabled={loading}
+          >
+            <RefreshCw size={15} className={loading ? "spin" : ""} />
+            Refresh
+          </button>
+          <button type="button" className="primary-button" onClick={onAddBug}>
+            <Plus size={15} />
+            New bug
+          </button>
+        </div>
       </header>
 
       <div className="bugs-toolbar">

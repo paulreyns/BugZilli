@@ -1,4 +1,5 @@
 import type { FieldControlProps } from "./FieldControlProps";
+import { fieldAria, fieldControlClass, FieldShell } from "./FieldShell";
 
 export function TextareaFieldControl({
   id,
@@ -7,20 +8,28 @@ export function TextareaFieldControl({
   value,
   disabled,
   onChange,
+  required,
+  invalid,
+  error,
 }: FieldControlProps) {
   return (
-    <div className="detail-row">
-      <label className="detail-label" htmlFor={id}>
-        {icon} {label}
-      </label>
+    <FieldShell
+      id={id}
+      label={label}
+      icon={icon}
+      required={required}
+      invalid={invalid}
+      error={error}
+    >
       <textarea
         id={id}
-        className="detail-control detail-control-textarea"
+        className={fieldControlClass(invalid, "detail-control-textarea")}
         value={value}
         disabled={disabled}
         rows={4}
         onChange={(event) => onChange(event.target.value)}
+        {...fieldAria(id, { required, invalid, error })}
       />
-    </div>
+    </FieldShell>
   );
 }
