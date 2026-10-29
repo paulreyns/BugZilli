@@ -22,12 +22,19 @@ vi.mock("./settings.js", () => ({
         product: "Browser",
         listColumns: ["id", "summary", "whiteboard", "severity"],
       },
+      {
+        id: "custom-linked",
+        name: "Custom linked",
+        product: "Browser",
+        linkedColumns: ["id", "summary", "status", "whiteboard", "priority"],
+      },
     ],
   }),
 }));
 
 import { setBugCacheDirectory } from "./bug-cache.js";
 import { getConnection } from "./settings.js";
+import type { LinkedBug } from "../shared/types.js";
 import {
   addAttachment,
   addComment,
@@ -53,6 +60,31 @@ function response(value: unknown, ok = true): Response {
 
 function emptyHistory(id = 42): Response {
   return response({ bugs: [{ id, history: [] }] });
+}
+
+function linkedBug(
+  partial: Pick<LinkedBug, "id" | "summary" | "assignedTo"> &
+    Partial<LinkedBug>,
+): LinkedBug {
+  const { id, summary, assignedTo, ...rest } = partial;
+  return {
+    id,
+    summary,
+    status: "",
+    resolution: "",
+    product: "",
+    component: "",
+    priority: "",
+    severity: "",
+    assignedTo,
+    creator: "",
+    creationTime: "",
+    lastChangeTime: "",
+    keywords: [],
+    platform: "",
+    version: "",
+    ...rest,
+  };
 }
 
 const getConnectionMock = vi.mocked(getConnection);
@@ -555,22 +587,89 @@ describe("Bugzilla API client", () => {
     const bug = await getBug(42);
 
     expect(bug.blocks).toEqual([
-      { id: 50, summary: "Release", assignedTo: "lead@example.com" },
-      { id: 51, summary: "", assignedTo: "" },
+      linkedBug({ id: 50, summary: "Release", assignedTo: "lead@example.com" }),
+      linkedBug({ id: 51, summary: "", assignedTo: "" }),
     ]);
     expect(bug.dependsOn).toEqual([
-      {
+      linkedBug({
         id: 7,
         summary: "Layout engine",
         assignedTo: "dev@example.com",
         assignedToName: "Dev Name",
-      },
+      }),
     ]);
     const linkedUrl = (fetchMock.mock.calls as [URL][])
       .map(([url]) => url)
       .find((url) => url.pathname === "/rest/bug");
     expect(linkedUrl?.searchParams.getAll("id")).toEqual(["50", "51", "7"]);
     expect(linkedUrl?.searchParams.get("include_fields")).toContain("assigned_to");
+  });
+
+  it("requests project-configured linked columns for Blocks and Depends On", async () => {
+    fetchMock.mockImplementation(async (url: URL) => {
+      if (url.pathname === "/rest/bug/42") {
+        return response({
+          bugs: [
+            {
+              id: 42,
+              summary: "Toolbar",
+              product: "Browser",
+              blocks: [50],
+              depends_on: [],
+            },
+          ],
+        });
+      }
+      if (url.pathname === "/rest/bug/42/comment") {
+        return response({ bugs: { "42": { comments: [] } } });
+      }
+      if (url.pathname === "/rest/bug/42/attachment") {
+        return response({ bugs: { "42": [] } });
+      }
+      if (url.pathname === "/rest/bug/42/history") {
+        return emptyHistory();
+      }
+      return response({
+        bugs: [
+          {
+            id: 50,
+            summary: "Release",
+            status: "NEW",
+            priority: "P1",
+            whiteboard: "[tracked]",
+            assigned_to: "lead@example.com",
+          },
+        ],
+      });
+    });
+
+    const bug = await getBug(42);
+
+    expect(bug.blocks).toEqual([
+      linkedBug({
+        id: 50,
+        summary: "Release",
+        status: "NEW",
+        priority: "P1",
+        assignedTo: "lead@example.com",
+        extraFields: { whiteboard: "[tracked]" },
+      }),
+    ]);
+    const linkedUrl = (fetchMock.mock.calls as [URL][])
+      .map(([url]) => url)
+      .find((url) => url.pathname === "/rest/bug");
+    const includeFields = linkedUrl?.searchParams.get("include_fields") ?? "";
+    expect(includeFields.split(",")).toEqual(
+      expect.arrayContaining([
+        "id",
+        "summary",
+        "status",
+        "whiteboard",
+        "priority",
+        "assigned_to",
+        "assigned_to_detail",
+      ]),
+    );
   });
 
   it("keeps linked bug IDs when their details cannot be loaded", async () => {
@@ -584,7 +683,9 @@ describe("Bugzilla API client", () => {
     const bug = await getBug(42);
 
     expect(bug.blocks).toEqual([]);
-    expect(bug.dependsOn).toEqual([{ id: 9, summary: "", assignedTo: "" }]);
+    expect(bug.dependsOn).toEqual([
+      linkedBug({ id: 9, summary: "", assignedTo: "" }),
+    ]);
   });
 
   it("loads detail field options from /rest/field/bug", async () => {
@@ -846,10 +947,10 @@ describe("Bugzilla API client", () => {
     });
 
     expect(bug.blocks).toEqual([
-      { id: 50, summary: "Release", assignedTo: "lead@example.com" },
+      linkedBug({ id: 50, summary: "Release", assignedTo: "lead@example.com" }),
     ]);
     expect(bug.dependsOn).toEqual([
-      { id: 7, summary: "Layout", assignedTo: "dev@example.com" },
+      linkedBug({ id: 7, summary: "Layout", assignedTo: "dev@example.com" }),
     ]);
     const [, options] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(JSON.parse(String(options.body))).toEqual({
@@ -874,12 +975,12 @@ describe("Bugzilla API client", () => {
     );
 
     await expect(searchLinkableBugs("50")).resolves.toEqual([
-      {
+      linkedBug({
         id: 50,
         summary: "Release blocker",
         assignedTo: "lead@example.com",
         assignedToName: "Lead",
-      },
+      }),
     ]);
     const [idUrl] = fetchMock.mock.calls[0] as [URL];
     expect(idUrl.pathname).toBe("/rest/bug");
@@ -893,7 +994,11 @@ describe("Bugzilla API client", () => {
       }),
     );
     await expect(searchLinkableBugs("toolbar")).resolves.toEqual([
-      { id: 7, summary: "Toolbar crash", assignedTo: "dev@example.com" },
+      linkedBug({
+        id: 7,
+        summary: "Toolbar crash",
+        assignedTo: "dev@example.com",
+      }),
     ]);
     const [textUrl] = fetchMock.mock.calls[1] as [URL];
     expect(textUrl.searchParams.get("quicksearch")).toBe("toolbar");

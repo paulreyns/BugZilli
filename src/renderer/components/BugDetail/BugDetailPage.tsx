@@ -36,8 +36,10 @@ import {
   readBugFieldValue,
   resolveDetailFields,
 } from "../../../shared/detail-fields";
+import { resolveLinkedColumns } from "../../../shared/linked-columns";
 import { splitIntegrationComments } from "../../../shared/integration-comments";
 import {
+  type Bug,
   type BugAttachmentDraft,
   type BugCommentDraft,
   type BugDetail,
@@ -48,7 +50,7 @@ import {
   type LinkedBug,
 } from "../../../shared/types";
 import { errorMessage } from "../../errors";
-import { formatDetailDate } from "../../utils/date";
+import { formatDetailDate, formatListDate } from "../../utils/date";
 import { FieldControl } from "../field-controls/FieldControl";
 import {
   AddLinkedBugDialog,
@@ -66,6 +68,7 @@ interface BugDetailPageProps {
   loading: boolean;
   error: string;
   detailFields?: string[];
+  linkedColumns?: string[];
   integrationUser?: string;
   onBack: () => void;
   onOpenBug: (id: number) => void;
@@ -88,6 +91,7 @@ export function BugDetailPage({
   loading,
   error,
   detailFields,
+  linkedColumns,
   integrationUser,
   onBack,
   onOpenBug,
@@ -493,6 +497,7 @@ export function BugDetailPage({
               bugs={bug.blocks}
               label="Blocks"
               relation="blocks"
+              columns={resolveLinkedColumns(linkedColumns)}
               disabled={editing || pending !== null}
               onOpenBug={onOpenBug}
               onUnlink={removeLinkedBug}
@@ -501,6 +506,7 @@ export function BugDetailPage({
               bugs={bug.dependsOn}
               label="Depends On"
               relation="dependsOn"
+              columns={resolveLinkedColumns(linkedColumns)}
               disabled={editing || pending !== null}
               onOpenBug={onOpenBug}
               onUnlink={removeLinkedBug}
@@ -856,10 +862,49 @@ function DetailRow({
   );
 }
 
+function linkedBugAsBug(linked: LinkedBug): Bug {
+  return { ...linked, description: "" };
+}
+
+function isLinkedDateColumn(key: string): boolean {
+  return (
+    detailFieldDefinition(key).format === "date" ||
+    key === "creationTime" ||
+    key === "lastChangeTime" ||
+    key === "deadline"
+  );
+}
+
+function LinkedBugColumnCell({
+  bug,
+  column,
+}: {
+  bug: LinkedBug;
+  column: string;
+}) {
+  switch (column) {
+    case "id":
+      return <>{bug.id}</>;
+    case "summary":
+      return <>{bug.summary || "—"}</>;
+    case "assignedTo":
+      return <>{bug.assignedToName || bug.assignedTo || "Unassigned"}</>;
+    default: {
+      const raw = readBugFieldValue(linkedBugAsBug(bug), column);
+      if (isLinkedDateColumn(column) && typeof raw === "string") {
+        return <>{formatListDate(raw)}</>;
+      }
+      const formatted = formatExtraFieldValue(raw).trim();
+      return <>{formatted || "—"}</>;
+    }
+  }
+}
+
 function LinkedBugTable({
   bugs,
   label,
   relation,
+  columns,
   disabled = false,
   onOpenBug,
   onUnlink,
@@ -867,10 +912,12 @@ function LinkedBugTable({
   bugs: LinkedBug[];
   label: string;
   relation: LinkedBugRelation;
+  columns?: string[];
   disabled?: boolean;
   onOpenBug: (id: number) => void;
   onUnlink: (relation: LinkedBugRelation, linkedBugId: number) => void;
 }) {
+  const resolvedColumns = resolveLinkedColumns(columns);
   if (bugs.length === 0) {
     return;
   }
@@ -881,9 +928,11 @@ function LinkedBugTable({
         <table className="linked-bugs-table" aria-label={label}>
           <thead>
             <tr>
-              <th scope="col">Id</th>
-              <th scope="col">Summary</th>
-              <th scope="col">Assignee</th>
+              {resolvedColumns.map((column) => (
+                <th key={column} scope="col">
+                  {detailFieldDefinition(column).label}
+                </th>
+              ))}
               <th scope="col" className="linked-bug-unlink-heading">
                 <span className="visually-hidden">Remove link</span>
               </th>
@@ -902,9 +951,20 @@ function LinkedBugTable({
                   }
                 }}
               >
-                <td className="linked-bug-id">{linked.id}</td>
-                <td className="linked-bug-summary">{linked.summary || "—"}</td>
-                <td>{linked.assignedToName || linked.assignedTo || "Unassigned"}</td>
+                {resolvedColumns.map((column) => (
+                  <td
+                    key={column}
+                    className={
+                      column === "id"
+                        ? "linked-bug-id"
+                        : column === "summary"
+                          ? "linked-bug-summary"
+                          : undefined
+                    }
+                  >
+                    <LinkedBugColumnCell bug={linked} column={column} />
+                  </td>
+                ))}
                 <td className="linked-bug-unlink">
                   <button
                     type="button"

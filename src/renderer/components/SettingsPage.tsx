@@ -5,6 +5,7 @@ import {
   defaultBoardStatuses,
 } from "../../shared/board-statuses";
 import { defaultDetailFields } from "../../shared/detail-fields";
+import { defaultLinkedColumns } from "../../shared/linked-columns";
 import { defaultListColumns } from "../../shared/list-columns";
 import type {
   AppSettings,
@@ -13,6 +14,7 @@ import type {
 } from "../../shared/types";
 import { BoardStatusesEditor } from "./BoardStatusesEditor";
 import { DetailFieldsEditor } from "./DetailFieldsEditor";
+import { LinkedColumnsEditor } from "./LinkedColumnsEditor";
 import { ListColumnsEditor } from "./ListColumnsEditor";
 
 interface SettingsPageProps {
@@ -58,6 +60,7 @@ export function SettingsPage({
       showClosedBugs: false,
       detailFields: defaultDetailFields(),
       listColumns: defaultListColumns(),
+      linkedColumns: defaultLinkedColumns(),
       boardGroupBy: DEFAULT_BOARD_GROUP_BY,
       boardStatuses: defaultBoardStatuses(),
     };
@@ -101,7 +104,7 @@ export function SettingsPage({
           <h1>{scopedToProject ? "Project settings" : "App settings"}</h1>
           <p className="page-subtitle">
             {scopedToProject
-              ? `Configure how ${activeProject?.name ?? "this product"} appears, including board columns, list columns, and detail fields.`
+              ? `Configure how ${activeProject?.name ?? "this product"} appears, including board columns, list columns, linked bugs columns, and detail fields.`
               : "Connect Bugzilli to your Bugzilla instance and choose which products appear as products."}
           </p>
         </div>
@@ -305,6 +308,13 @@ export function SettingsPage({
                   listColumns={project.listColumns}
                   onChange={(columns) =>
                     updateProject(project.id, { listColumns: columns })
+                  }
+                />
+                <LinkedColumnsEditor
+                  product={project.product}
+                  linkedColumns={project.linkedColumns}
+                  onChange={(columns) =>
+                    updateProject(project.id, { linkedColumns: columns })
                   }
                 />
                 <DetailFieldsEditor

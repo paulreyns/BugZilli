@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveDetailFields } from "../shared/detail-fields";
+import { resolveLinkedColumns } from "../shared/linked-columns";
 import {
   ALL_FILTER_ID,
   parseSelectedFilters,
@@ -342,6 +343,7 @@ export default function App() {
         loading={loadingDetail}
         error={detailError}
         detailFields={resolveDetailFields(activeProject?.detailFields)}
+        linkedColumns={resolveLinkedColumns(activeProject?.linkedColumns)}
         integrationUser={settings.integrationUser}
         onBack={() => {
           setSelectedBug(undefined);
