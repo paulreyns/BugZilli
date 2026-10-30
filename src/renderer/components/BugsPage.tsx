@@ -142,6 +142,9 @@ export function BugsPage(props: BugsPageProps) {
           {...(project.boardGroupBy
             ? { boardGroupBy: project.boardGroupBy }
             : {})}
+          {...(project.boardColumns
+            ? { boardColumns: project.boardColumns }
+            : {})}
           {...(project.boardStatuses
             ? { boardStatuses: project.boardStatuses }
             : {})}

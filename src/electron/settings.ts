@@ -1,6 +1,10 @@
 import { app, safeStorage } from "electron";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  cleanBoardColumns,
+  resolveBoardGroupBy,
+} from "../shared/board-statuses.js";
 import { cleanSavedFilters } from "../shared/list-filters.js";
 import type { AppSettings, Project, SettingsUpdate } from "../shared/types.js";
 
@@ -61,7 +65,13 @@ function cleanProjects(projects: Project[]): Project[] {
       typeof project.boardGroupBy === "string"
         ? project.boardGroupBy.trim()
         : "";
-    const boardStatuses = cleanFieldKeys(project.boardStatuses);
+    const hasBoardColumns = Array.isArray(project.boardColumns);
+    const boardColumns = hasBoardColumns
+      ? cleanBoardColumns(project.boardColumns, resolveBoardGroupBy(boardGroupBy))
+      : undefined;
+    const boardStatuses = hasBoardColumns
+      ? undefined
+      : cleanFieldKeys(project.boardStatuses);
     const filters = cleanSavedFilters(project.filters);
     return {
       id: project.id,
@@ -77,6 +87,7 @@ function cleanProjects(projects: Project[]): Project[] {
       ...(boardGroupBy && boardGroupBy !== "status"
         ? { boardGroupBy }
         : {}),
+      ...(hasBoardColumns ? { boardColumns: boardColumns ?? [] } : {}),
       ...(boardStatuses ? { boardStatuses } : {}),
       ...(filters ? { filters } : {}),
     };

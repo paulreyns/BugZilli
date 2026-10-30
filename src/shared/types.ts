@@ -37,6 +37,14 @@ export interface SavedFilter {
   rules: FilterRule[];
 }
 
+/** A Board column the user named, plus the group-by values placed in it. */
+export interface BoardColumnConfig {
+  id: string;
+  name: string;
+  /** Values of the project's group-by field that appear in this column. */
+  values: string[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -58,8 +66,17 @@ export interface Project {
    */
   boardGroupBy?: string;
   /**
-   * Ordered Board column values for `boardGroupBy`. Defaults to the standard
-   * Bugzilla status workflow when grouping by status.
+   * User-named Board columns, in display order. Each column lists the
+   * group-by values mapped into it. Values that are not listed are unmapped
+   * and start in the New column. An empty array means every value is in New.
+   * When omitted, the Board keeps the legacy one-column-per-value layout from
+   * `boardStatuses`.
+   */
+  boardColumns?: BoardColumnConfig[];
+  /**
+   * Legacy ordered Board column values for `boardGroupBy`. Used only when
+   * `boardColumns` is omitted. Defaults to the standard Bugzilla status
+   * workflow when grouping by status.
    */
   boardStatuses?: string[];
   /** User-defined list/board filters for this product. */

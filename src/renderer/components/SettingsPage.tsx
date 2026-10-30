@@ -1,9 +1,6 @@
 import { KeyRound, Plug, Plus, Save, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  DEFAULT_BOARD_GROUP_BY,
-  defaultBoardStatuses,
-} from "../../shared/board-statuses";
+import { DEFAULT_BOARD_GROUP_BY } from "../../shared/board-statuses";
 import { defaultDetailFields } from "../../shared/detail-fields";
 import { defaultLinkedColumns } from "../../shared/linked-columns";
 import { defaultListColumns } from "../../shared/list-columns";
@@ -12,7 +9,7 @@ import type {
   Project,
   SettingsUpdate,
 } from "../../shared/types";
-import { BoardStatusesEditor } from "./BoardStatusesEditor";
+import { BoardColumnsEditor } from "./BoardColumnsEditor";
 import { DetailFieldsEditor } from "./DetailFieldsEditor";
 import { LinkedColumnsEditor } from "./LinkedColumnsEditor";
 import { ListColumnsEditor } from "./ListColumnsEditor";
@@ -62,7 +59,7 @@ export function SettingsPage({
       listColumns: defaultListColumns(),
       linkedColumns: defaultLinkedColumns(),
       boardGroupBy: DEFAULT_BOARD_GROUP_BY,
-      boardStatuses: defaultBoardStatuses(),
+      boardColumns: [],
     };
     setProjects((current) => [...current, project]);
   }
@@ -283,25 +280,19 @@ export function SettingsPage({
                   <span>
                     Show closed bugs
                     <small>
-                      Include resolved bugs in lists and show the Closed column
-                      on the Board.
+                      Include closed bugs in lists and on the Board. While
+                      grouping by status, a column that only contains Closed
+                      stays hidden until this is on.
                     </small>
                   </span>
                 </label>
-                <BoardStatusesEditor
+                <BoardColumnsEditor
                   product={project.product}
                   boardGroupBy={project.boardGroupBy}
+                  boardColumns={project.boardColumns}
                   boardStatuses={project.boardStatuses}
                   showClosedBugs={project.showClosedBugs ?? false}
-                  onGroupByChange={(groupBy, columns) =>
-                    updateProject(project.id, {
-                      boardGroupBy: groupBy,
-                      boardStatuses: columns,
-                    })
-                  }
-                  onColumnsChange={(statuses) =>
-                    updateProject(project.id, { boardStatuses: statuses })
-                  }
+                  onChange={(update) => updateProject(project.id, update)}
                 />
                 <ListColumnsEditor
                   product={project.product}
