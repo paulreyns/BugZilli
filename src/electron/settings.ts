@@ -5,14 +5,21 @@ import {
   cleanBoardColumns,
   resolveBoardGroupBy,
 } from "../shared/board-statuses.js";
+import { cleanFavourites } from "../shared/favourites.js";
 import { cleanSavedFilters } from "../shared/list-filters.js";
-import type { AppSettings, Project, SettingsUpdate } from "../shared/types.js";
+import type {
+  AppSettings,
+  FavouriteBug,
+  Project,
+  SettingsUpdate,
+} from "../shared/types.js";
 
 interface StoredSettings {
   baseUrl: string;
   projects: Project[];
   userEmail?: string;
   integrationUser?: string;
+  favourites?: FavouriteBug[];
   apiKey?: string;
   keyStorage?: "secure" | "plain";
 }
@@ -97,6 +104,7 @@ function cleanProjects(projects: Project[]): Project[] {
 async function readStoredSettings(): Promise<StoredSettings> {
   try {
     const value = JSON.parse(await readFile(settingsPath(), "utf8")) as StoredSettings;
+    const favourites = cleanFavourites(value.favourites);
     return {
       baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
       projects: Array.isArray(value.projects) ? value.projects : [],
@@ -106,6 +114,7 @@ async function readStoredSettings(): Promise<StoredSettings> {
       ...(typeof value.integrationUser === "string" && value.integrationUser.trim()
         ? { integrationUser: value.integrationUser.trim() }
         : {}),
+      ...(favourites ? { favourites } : {}),
       ...(typeof value.apiKey === "string" ? { apiKey: value.apiKey } : {}),
       ...(value.keyStorage === "secure" || value.keyStorage === "plain"
         ? { keyStorage: value.keyStorage }
@@ -134,6 +143,7 @@ function publicSettings(stored: StoredSettings): AppSettings {
     projects: stored.projects,
     userEmail: stored.userEmail ?? "",
     integrationUser: stored.integrationUser ?? "",
+    favourites: stored.favourites ?? [],
     hasApiKey: Boolean(stored.apiKey),
     keyStorage: stored.apiKey ? (stored.keyStorage ?? "plain") : "none",
   };
@@ -176,6 +186,13 @@ export async function saveSettings(update: SettingsUpdate): Promise<AppSettings>
       ? update.userEmail.trim()
       : (current.userEmail ?? "");
   if (userEmail) next.userEmail = userEmail;
+
+  if (update.favourites !== undefined) {
+    const favourites = cleanFavourites(update.favourites);
+    if (favourites) next.favourites = favourites;
+  } else if (current.favourites?.length) {
+    next.favourites = current.favourites;
+  }
 
   if (!update.clearApiKey && update.apiKey === undefined && current.apiKey) {
     next.apiKey = current.apiKey;
