@@ -111,6 +111,13 @@ export interface DetailFieldOption {
   required?: boolean;
 }
 
+/** A bug the user starred for quick access in the sidebar. Stored locally only. */
+export interface FavouriteBug {
+  id: number;
+  /** Display name (usually the bug summary) shown in the Favourites list. */
+  name: string;
+}
+
 export interface AppSettings {
   baseUrl: string;
   projects: Project[];
@@ -118,6 +125,8 @@ export interface AppSettings {
   userEmail: string;
   /** Bugzilla login whose comments appear under the Integrations tab. */
   integrationUser: string;
+  /** Locally favourited bugs for the sidebar (not synced to Bugzilla). */
+  favourites: FavouriteBug[];
   hasApiKey: boolean;
   keyStorage: "secure" | "plain" | "none";
 }
@@ -129,6 +138,11 @@ export interface SettingsUpdate {
   userEmail?: string;
   /** Omit to keep the saved value; an empty string clears it. */
   integrationUser?: string;
+  /**
+   * Replace the favourites list. Omit to keep the saved value; pass `[]`
+   * (or omit after cleaning yields nothing) to clear.
+   */
+  favourites?: FavouriteBug[];
   apiKey?: string;
   clearApiKey?: boolean;
 }

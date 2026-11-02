@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveDetailFields } from "../shared/detail-fields";
+import {
+  isFavouriteBug,
+  syncFavouriteName,
+  toggleFavouriteBug,
+} from "../shared/favourites";
 import { resolveLinkedColumns } from "../shared/linked-columns";
 import {
   ALL_FILTER_ID,
@@ -238,8 +243,24 @@ export default function App() {
     }
   }
 
+  async function save(update: SettingsUpdate) {
+    const next = await window.bugzilli.saveSettings(update);
+    setSettings(next);
+    if (!next.projects.some(({ id }) => id === activeProjectId)) {
+      setActiveProjectId(next.projects[0]?.id);
+    }
+  }
+
   function rememberBug(id: number, next: BugDetail) {
     setSelectedBug((current) => (current?.id === id ? next : current));
+    if (!settings || !isFavouriteBug(settings.favourites, id)) return;
+    const favourites = syncFavouriteName(settings.favourites, id, next.summary);
+    if (!favourites || favourites === settings.favourites) return;
+    void save({
+      baseUrl: settings.baseUrl,
+      projects: settings.projects,
+      favourites,
+    });
   }
 
   function updateBug(id: number, update: BugUpdate) {
@@ -260,12 +281,13 @@ export default function App() {
     });
   }
 
-  async function save(update: SettingsUpdate) {
-    const next = await window.bugzilli.saveSettings(update);
-    setSettings(next);
-    if (!next.projects.some(({ id }) => id === activeProjectId)) {
-      setActiveProjectId(next.projects[0]?.id);
-    }
+  async function toggleFavourite(bug: BugDetail) {
+    if (!settings) return;
+    await save({
+      baseUrl: settings.baseUrl,
+      projects: settings.projects,
+      favourites: toggleFavouriteBug(settings.favourites, bug.id, bug.summary),
+    });
   }
 
   async function addProjectFilter(projectId: string, filter: SavedFilter) {
@@ -348,6 +370,11 @@ export default function App() {
         detailFields={resolveDetailFields(activeProject?.detailFields)}
         linkedColumns={resolveLinkedColumns(activeProject?.linkedColumns)}
         integrationUser={settings.integrationUser}
+        favourited={
+          selectedBug
+            ? isFavouriteBug(settings.favourites, selectedBug.id)
+            : false
+        }
         onBack={() => {
           setSelectedBug(undefined);
           setDetailError("");
@@ -358,6 +385,9 @@ export default function App() {
         onUpdateBug={updateBug}
         onAddComment={addComment}
         onAddAttachment={addAttachment}
+        {...(selectedBug
+          ? { onToggleFavourite: () => toggleFavourite(selectedBug) }
+          : {})}
       />
     );
   } else if (creatingBug && activeProject) {
@@ -429,9 +459,16 @@ export default function App() {
     <div className="app-shell">
       <Sidebar
         projects={settings.projects}
+        favourites={settings.favourites}
         {...(activeProjectId ? { activeProjectId } : {})}
+        {...(selectedBug ? { activeFavouriteId: selectedBug.id } : {})}
         page={page}
         onNavigate={navigate}
+        onOpenFavourite={(id) => {
+          setGlobalSettings(false);
+          setCreatingBug(false);
+          void openBug(id);
+        }}
         onGlobalSettings={() => {
           setGlobalSettings(true);
           setPage("settings");

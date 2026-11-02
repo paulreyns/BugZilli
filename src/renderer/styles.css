@@ -116,10 +116,21 @@ button {
   color: #ae2a19;
 }
 
-.project-nav {
+.sidebar-scroll {
   flex: 1;
-  padding: 0 10px;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-nav,
+.favourites-nav {
+  padding: 0 10px;
+}
+
+.favourites-nav {
+  padding-bottom: 12px;
 }
 
 .project-group {
@@ -1502,6 +1513,39 @@ button:disabled {
 
 .follow-button-active:hover {
   background: #d6e7ff;
+}
+
+.favourite-button-active {
+  color: #e2a103;
+  border-color: #f5cd47;
+  background: #fff7d6;
+}
+
+.favourite-button-active:hover {
+  background: #ffeeb0;
+}
+
+.favourites-empty {
+  margin: 4px 0 2px;
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.favourite-link {
+  gap: 8px;
+}
+
+.favourite-id {
+  flex: 0 0 auto;
+  min-width: 2.5ch;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.favourite-link.active .favourite-id {
+  color: #0c66e4;
 }
 
 .follow-menu-panel {

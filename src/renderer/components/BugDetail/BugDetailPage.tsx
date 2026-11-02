@@ -58,6 +58,7 @@ import {
 } from "./AddLinkedBugDialog";
 import { AttachmentsTab } from "./AttachmentsTab";
 import { CommentsTab } from "./CommentsTab";
+import { FavouriteButton } from "./FavouriteButton";
 import { FollowMenu } from "./FollowMenu";
 import { HistoryTab } from "./HistoryTab";
 import { IntegrationsTab } from "./IntegrationsTab";
@@ -70,6 +71,7 @@ interface BugDetailPageProps {
   detailFields?: string[];
   linkedColumns?: string[];
   integrationUser?: string;
+  favourited?: boolean;
   onBack: () => void;
   onOpenBug: (id: number) => void;
   onOpenAttachment: (id: number) => Promise<void>;
@@ -77,9 +79,16 @@ interface BugDetailPageProps {
   onUpdateBug: (id: number, update: BugUpdate) => Promise<void>;
   onAddComment: (id: number, comment: BugCommentDraft) => Promise<void>;
   onAddAttachment: (id: number, attachment: BugAttachmentDraft) => Promise<void>;
+  onToggleFavourite?: () => Promise<void> | void;
 }
 
-type PendingAction = "save" | "comment" | "attachment" | "follow" | "link";
+type PendingAction =
+  | "save"
+  | "comment"
+  | "attachment"
+  | "follow"
+  | "favourite"
+  | "link";
 
 function resolutionLabel(value: string): string {
   return value && value !== "---" ? value : "";
@@ -93,6 +102,7 @@ export function BugDetailPage({
   detailFields,
   linkedColumns,
   integrationUser,
+  favourited = false,
   onBack,
   onOpenBug,
   onOpenAttachment,
@@ -100,6 +110,7 @@ export function BugDetailPage({
   onUpdateBug,
   onAddComment,
   onAddAttachment,
+  onToggleFavourite,
 }: BugDetailPageProps) {
   const [tab, setTab] = useState<
     "comments" | "attachments" | "history" | "integrations"
@@ -269,6 +280,19 @@ export function BugDetailPage({
       });
     } catch {
       // The banner already shows the Bugzilla error.
+    }
+  }
+
+  async function toggleFavourite() {
+    if (!bug || !onToggleFavourite || pendingRef.current || editing) return;
+    const adding = !favourited;
+    try {
+      await run("favourite", async () => {
+        await onToggleFavourite();
+        return adding ? "Added to favourites." : "Removed from favourites.";
+      });
+    } catch {
+      // The banner already shows the save error.
     }
   }
 
@@ -456,6 +480,12 @@ export function BugDetailPage({
               <Pencil size={15} /> Edit
             </button>
           )}
+          <FavouriteButton
+            favourited={favourited}
+            disabled={editing || pending !== null || !onToggleFavourite}
+            pending={pending === "favourite"}
+            onToggle={() => void toggleFavourite()}
+          />
           <FollowMenu
             followers={bug.cc}
             {...(currentUser ? { currentUser } : {})}
