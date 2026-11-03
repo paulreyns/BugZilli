@@ -291,4 +291,74 @@ describe("detail fields", () => {
     expect(byKey.get("priority")?.required).toBeUndefined();
     expect(byKey.get("summary")?.required).toBeUndefined();
   });
+
+  it("promotes type-0 fields with legal values to select", () => {
+    const catalog = catalogFromFieldApi(
+      [
+        {
+          name: "target_milestone",
+          display_name: "Target Milestone",
+          type: 0,
+          value_field: "product",
+          values: [
+            {
+              name: "---",
+              sort_key: 0,
+              visibility_values: [],
+            },
+            {
+              name: "1.0",
+              sort_key: 1,
+              visibility_values: ["Browser"],
+            },
+            {
+              name: "2.0",
+              sort_key: 2,
+              visibility_values: ["Mobile"],
+            },
+          ],
+        },
+        {
+          name: "cf_tier",
+          display_name: "Tier",
+          type: 2,
+          value_field: "product",
+          values: [
+            { name: "---", sort_key: 0, visibility_values: [] },
+            {
+              name: "Gold",
+              sort_key: 1,
+              visibility_values: ["browser"],
+            },
+            {
+              name: "Silver",
+              sort_key: 2,
+              visibility_values: ["Mobile"],
+            },
+          ],
+        },
+        {
+          name: "cf_flags",
+          display_name: "Flags",
+          type: 3,
+          values: ["alpha", "beta", "gamma"],
+        },
+      ],
+      "Browser",
+    );
+
+    const byKey = new Map(catalog.map((option) => [option.key, option]));
+    expect(byKey.get("targetMilestone")).toMatchObject({
+      type: "select",
+      values: ["---", "1.0"],
+    });
+    expect(byKey.get("cf_tier")).toMatchObject({
+      type: "select",
+      values: ["---", "Gold"],
+    });
+    expect(byKey.get("cf_flags")).toMatchObject({
+      type: "multiselect",
+      values: ["alpha", "beta", "gamma"],
+    });
+  });
 });

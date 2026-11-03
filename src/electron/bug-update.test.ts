@@ -171,5 +171,22 @@ describe("bug update drafts", () => {
         type: "text",
       }),
     ).toEqual({ type: "text" });
+
+    expect(
+      fieldEditorMeta("cf_team", {
+        key: "cf_team",
+        label: "Team",
+        type: "unknown",
+        values: ["Alpha", "Beta"],
+      }),
+    ).toEqual({ type: "select", values: ["Alpha", "Beta"] });
+
+    expect(
+      fieldEditorMeta("targetMilestone", {
+        key: "targetMilestone",
+        label: "Target milestone",
+        values: ["---", "1.0"],
+      }),
+    ).toEqual({ type: "select", values: ["---", "1.0"] });
   });
 });

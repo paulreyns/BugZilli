@@ -9,15 +9,18 @@ import { TextareaFieldControl } from "./TextareaFieldControl";
 
 export function FieldControl(props: FieldControlProps) {
   const { type, values } = props;
+  const hasValues = (values?.length ?? 0) > 0;
 
-  if (type === "select" && (values?.length ?? 0) > 0) {
+  // Legal values win over a missing/unknown type: Bugzilla marks some
+  // select-backed fields (e.g. target_milestone, version) as type 0.
+  if (
+    hasValues &&
+    (type === "select" || type === "unknown" || type === undefined)
+  ) {
     return <SelectFieldControl {...props} />;
   }
 
-  if (
-    (type === "multiselect" || type === "keywords") &&
-    (values?.length ?? 0) > 0
-  ) {
+  if (hasValues && (type === "multiselect" || type === "keywords")) {
     return <MultiSelectFieldControl {...props} />;
   }
 
