@@ -3,6 +3,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import type { BugComment, BugCommentDraft } from "../../../shared/types";
 import { formatDetailDate } from "../../utils/date";
 import { initials, userAvatarStyle } from "../BugViewShared";
+import { CommentEditor } from "./CommentEditor";
+import { CommentMarkdown } from "./CommentMarkdown";
 import { TabEmpty } from "./TabEmpty";
 
 export function CommentsTab({
@@ -11,6 +13,7 @@ export function CommentsTab({
   comments,
   disabled,
   pending,
+  baseUrl,
   onSubmit,
 }: {
   hidden: boolean;
@@ -18,6 +21,7 @@ export function CommentsTab({
   comments: BugComment[];
   disabled: boolean;
   pending: boolean;
+  baseUrl?: string;
   onSubmit: (comment: BugCommentDraft) => Promise<void>;
 }) {
   return (
@@ -26,11 +30,15 @@ export function CommentsTab({
         comments={comments}
         icon={<MessageSquare size={28} />}
         emptyText="No comments yet."
+        bugId={bugId}
+        {...(baseUrl ? { baseUrl } : {})}
       />
       <CommentComposer
         key={`comment-${bugId}`}
+        bugId={bugId}
         disabled={disabled}
         pending={pending}
+        {...(baseUrl ? { baseUrl } : {})}
         onSubmit={onSubmit}
       />
     </div>
@@ -41,10 +49,14 @@ export function CommentList({
   comments,
   icon,
   emptyText,
+  baseUrl,
+  bugId,
 }: {
   comments: BugComment[];
   icon: ReactNode;
   emptyText: string;
+  baseUrl?: string;
+  bugId?: number;
 }) {
   if (comments.length === 0) return <TabEmpty icon={icon} text={emptyText} />;
   return comments.map((comment) => {
@@ -64,97 +76,30 @@ export function CommentList({
             <time>{formatDetailDate(comment.creationTime)}</time>
             {comment.isPrivate && <span className="private-pill">Private</span>}
           </header>
-          <div className="comment-body">{renderCommentText(comment.text)}</div>
+          <div className="comment-body">
+            <CommentMarkdown
+              text={comment.text}
+              {...(baseUrl ? { baseUrl } : {})}
+              {...(bugId !== undefined ? { bugId } : {})}
+            />
+          </div>
         </div>
       </article>
     );
   });
 }
 
-function renderCommentText(text: string): ReactNode {
-  const lines = text.replace(/\r\n?/g, "\n").split("\n");
-  const parts: ReactNode[] = [];
-
-  for (let index = 0; index < lines.length; ) {
-    const line = lines[index] ?? "";
-    const quoteMatch = line.match(/^(\s*)(>{1,})(?:\s?)(.*)$/);
-    if (!quoteMatch) {
-      const normalLines: string[] = [];
-      while (index < lines.length) {
-        const normalLine = lines[index] ?? "";
-        if (/^(\s*)>{1,}(?:\s?)(.*)$/.test(normalLine)) break;
-        normalLines.push(normalLine);
-        index++;
-      }
-      parts.push(
-        <span key={`text-${index}`}>
-          {renderInlineCommentText(normalLines.join("\n"))}
-        </span>,
-      );
-      continue;
-    }
-
-    const quoteLines: ReactNode[] = [];
-    while (index < lines.length) {
-      const quoteLine = lines[index] ?? "";
-      const match = quoteLine.match(/^(\s*)(>{1,})(?:\s?)(.*)$/);
-      if (!match) break;
-      const depth = Math.max(1, match[2]?.length ?? 1);
-      quoteLines.push(
-        <div
-          className="comment-blockquote-line"
-          data-depth={depth}
-          key={`quote-line-${index}`}
-        >
-          {renderInlineCommentText(match[3] ?? "")}
-        </div>,
-      );
-      index++;
-    }
-    parts.push(
-      <blockquote className="comment-blockquote" key={`quote-${index}`}>
-        {quoteLines}
-      </blockquote>,
-    );
-  }
-
-  return <>{parts}</>;
-}
-
-function renderInlineCommentText(text: string): ReactNode {
-  const urlPattern = /https?:\/\/[^\s<>"']+/gi;
-  const parts: ReactNode[] = [];
-  let lastIndex = 0;
-
-  for (const match of text.matchAll(urlPattern)) {
-    const fullMatch = match[0];
-    const trailingPunctuation = fullMatch.match(/[.,!?;:)\]}]+$/)?.[0] ?? "";
-    const url = fullMatch.slice(0, fullMatch.length - trailingPunctuation.length);
-    const startIndex = match.index ?? 0;
-
-    if (url.length === 0) continue;
-
-    parts.push(text.slice(lastIndex, startIndex));
-    parts.push(
-      <a href={url} key={startIndex} rel="noreferrer" target="_blank">
-        {url}
-      </a>,
-    );
-    parts.push(trailingPunctuation);
-    lastIndex = startIndex + fullMatch.length;
-  }
-
-  parts.push(text.slice(lastIndex));
-  return <>{parts}</>;
-}
-
 function CommentComposer({
+  bugId,
   disabled,
   pending,
+  baseUrl,
   onSubmit,
 }: {
+  bugId: number;
   disabled: boolean;
   pending: boolean;
+  baseUrl?: string;
   onSubmit: (comment: BugCommentDraft) => Promise<void>;
 }) {
   const [text, setText] = useState("");
@@ -179,19 +124,14 @@ function CommentComposer({
   return (
     <form className="composer" onSubmit={(event) => void submit(event)}>
       <label htmlFor="bug-comment">Add a comment</label>
-      <textarea
+      <CommentEditor
         id="bug-comment"
-        value={text}
-        placeholder="Write a comment…"
-        rows={4}
+        text={text}
         disabled={disabled}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault();
-            void submit();
-          }
-        }}
+        placeholder="Write a comment…"
+        bugId={bugId}
+        {...(baseUrl ? { baseUrl } : {})}
+        onTextChange={setText}
       />
       <div className="composer-actions">
         <label className="check-inline">

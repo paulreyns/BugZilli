@@ -57,6 +57,7 @@ import {
   type LinkedBugRelation,
 } from "./AddLinkedBugDialog";
 import { AttachmentsTab } from "./AttachmentsTab";
+import { CommentMarkdown } from "./CommentMarkdown";
 import { CommentsTab } from "./CommentsTab";
 import { FavouriteButton } from "./FavouriteButton";
 import { FollowMenu } from "./FollowMenu";
@@ -505,7 +506,11 @@ export function BugDetailPage({
           <section className="description-section">
             <h2>Description</h2>
             <div className="description-content">
-              {bug.description || "No description was provided."}
+              {bug.description ? (
+                <CommentMarkdown text={bug.description} baseUrl={baseUrl} bugId={bug.id} />
+              ) : (
+                "No description was provided."
+              )}
             </div>
           </section>
 
@@ -612,6 +617,7 @@ export function BugDetailPage({
             <CommentsTab
               hidden={activeTab !== "comments"}
               bugId={bug.id}
+              baseUrl={baseUrl}
               comments={comments}
               disabled={pending !== null}
               pending={pending === "comment"}
@@ -646,6 +652,8 @@ export function BugDetailPage({
               <IntegrationsTab
                 hidden={activeTab !== "integrations"}
                 comments={integrationComments}
+                baseUrl={baseUrl}
+                bugId={bug.id}
               />
             )}
           </section>
