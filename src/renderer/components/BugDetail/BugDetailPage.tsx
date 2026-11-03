@@ -794,14 +794,17 @@ function DetailField({
   }
 
   if (form && isExtraDetailField(fieldKey)) {
+    // Same resolution path as standard fields / Add Bug: promote
+    // unknown+values to a select so custom dropdowns get their legal list.
+    const editor = fieldEditorMeta(fieldKey, fieldOption);
     return (
       <FieldControl
         id={`bug-field-${fieldKey}`}
         label={label}
         icon={icon}
         value={form.extraFields[fieldKey] ?? ""}
-        type={fieldOption?.type}
-        values={fieldOption?.values}
+        type={editor.type}
+        values={editor.values}
         disabled={pending}
         onChange={(value) =>
           onDraftChange({ extraFields: { [fieldKey]: value } })

@@ -394,8 +394,22 @@ export function catalogFromBugRecord(
 function stringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
-    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      // Some Bugzilla installs nest `{ name: "Product" }` in visibility lists.
+      if (item && typeof item === "object") {
+        const name = (item as { name?: unknown }).name;
+        return typeof name === "string" ? name.trim() : "";
+      }
+      return "";
+    })
     .filter(Boolean);
+}
+
+function listIncludesProduct(list: string[], product: string): boolean {
+  const needle = product.trim().toLowerCase();
+  if (!needle) return false;
+  return list.some((entry) => entry.toLowerCase() === needle);
 }
 
 function fieldVisibleForProduct(
@@ -406,7 +420,7 @@ function fieldVisibleForProduct(
     typeof field.visibility_field === "string" ? field.visibility_field : "";
   if (!visibilityField) return true;
   if (visibilityField !== "product") return true;
-  return stringList(field.visibility_values).includes(product);
+  return listIncludesProduct(stringList(field.visibility_values), product);
 }
 
 function valuesForProduct(
@@ -419,16 +433,26 @@ function valuesForProduct(
 
   const entries: { name: string; sortKey: number }[] = [];
   for (const raw of field.values) {
+    // Accept plain strings as well as the usual `{ name, sort_key, ... }` objects.
+    if (typeof raw === "string") {
+      const name = raw.trim();
+      if (name) entries.push({ name, sortKey: 0 });
+      continue;
+    }
     if (!raw || typeof raw !== "object") continue;
     const value = raw as Record<string, unknown>;
     const name = typeof value.name === "string" ? value.name : "";
     if (!name) continue;
     if (value.is_active === false) continue;
-    if (
-      valueField === "product" &&
-      !stringList(value.visibility_values).includes(product)
-    ) {
-      continue;
+    if (valueField === "product") {
+      const visibility = stringList(value.visibility_values);
+      // Empty visibility_values ⇒ shown for every product (e.g. "---").
+      if (
+        visibility.length > 0 &&
+        !listIncludesProduct(visibility, product)
+      ) {
+        continue;
+      }
     }
     const sortKey =
       typeof value.sort_key === "number"
@@ -490,12 +514,17 @@ export function catalogFromFieldApi(
     const known = knownByKey.get(key);
     const displayName =
       typeof field.display_name === "string" ? field.display_name.trim() : "";
-    const type = detailFieldTypeFromBugzilla(field.type);
     const values = valuesForProduct(field, trimmedProduct);
+    let type = detailFieldTypeFromBugzilla(field.type);
+    // Bugzilla reports version / target_milestone (and some customs) as type 0
+    // even though they ship a legal-values list — treat those as selects.
+    if (type === "unknown" && values.length > 0) {
+      type = "select";
+    }
     const option: DetailFieldOption = {
       key,
       label: known?.label || displayName || humanizeFieldKey(key),
-      type,
+      ...(type !== "unknown" ? { type } : {}),
       ...(values.length > 0 ? { values } : {}),
       ...(field.is_mandatory === true ? { required: true } : {}),
     };
