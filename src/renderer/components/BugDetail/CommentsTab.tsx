@@ -72,6 +72,56 @@ export function CommentList({
 }
 
 function renderCommentText(text: string): ReactNode {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const parts: ReactNode[] = [];
+
+  for (let index = 0; index < lines.length; ) {
+    const line = lines[index] ?? "";
+    const quoteMatch = line.match(/^(\s*)(>{1,})(?:\s?)(.*)$/);
+    if (!quoteMatch) {
+      const normalLines: string[] = [];
+      while (index < lines.length) {
+        const normalLine = lines[index] ?? "";
+        if (/^(\s*)>{1,}(?:\s?)(.*)$/.test(normalLine)) break;
+        normalLines.push(normalLine);
+        index++;
+      }
+      parts.push(
+        <span key={`text-${index}`}>
+          {renderInlineCommentText(normalLines.join("\n"))}
+        </span>,
+      );
+      continue;
+    }
+
+    const quoteLines: ReactNode[] = [];
+    while (index < lines.length) {
+      const quoteLine = lines[index] ?? "";
+      const match = quoteLine.match(/^(\s*)(>{1,})(?:\s?)(.*)$/);
+      if (!match) break;
+      const depth = Math.max(1, match[2]?.length ?? 1);
+      quoteLines.push(
+        <div
+          className="comment-blockquote-line"
+          data-depth={depth}
+          key={`quote-line-${index}`}
+        >
+          {renderInlineCommentText(match[3] ?? "")}
+        </div>,
+      );
+      index++;
+    }
+    parts.push(
+      <blockquote className="comment-blockquote" key={`quote-${index}`}>
+        {quoteLines}
+      </blockquote>,
+    );
+  }
+
+  return <>{parts}</>;
+}
+
+function renderInlineCommentText(text: string): ReactNode {
   const urlPattern = /https?:\/\/[^\s<>"']+/gi;
   const parts: ReactNode[] = [];
   let lastIndex = 0;
