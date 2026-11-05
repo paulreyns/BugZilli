@@ -4,6 +4,12 @@ A focused desktop client for browsing Bugzilla issues. Bugzilli provides a
 Jira-inspired list, status board, and bug detail view while keeping Bugzilla as
 the only source of data.
 
+Examples lists of Bugs
+<img src="images/list.png" alt="Board View" />
+
+Example Board View
+<img src="images/board.png" alt="Board View" />
+
 ## Features
 
 - Configure any Bugzilla REST API URL and optional API key
